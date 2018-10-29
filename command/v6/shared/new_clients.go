@@ -93,6 +93,11 @@ func NewRouterClient(config command.Config, ui command.UI, uaaClient *uaa.Client
 	routerConfig := router.Config{
 		AppName:    config.BinaryName(),
 		AppVersion: config.BinaryVersion(),
+		ConnectionConfig: router.ConnectionConfig{
+			DialTimeout:       config.DialTimeout(),
+			SkipSSLValidation: config.SkipSSLValidation(),
+		},
+		RoutingEndpoint: config.RoutingEndpoint(),
 	}
 
 	routerWrappers := []router.ConnectionWrapper{}
@@ -108,19 +113,11 @@ func NewRouterClient(config command.Config, ui command.UI, uaaClient *uaa.Client
 	}
 
 	authWrapper := routerWrapper.NewUAAAuthentication(nil, config)
-	// TODO: add verbose wrapper, location wrapper, and retry wrapper
 
 	routerWrappers = append(routerWrappers, authWrapper)
+	routerConfig.Wrappers = routerWrappers
 
-	routerClient := router.NewClient(routerConfig, routerWrappers)
-	err := routerClient.SetupResources(config.RoutingEndpoint(), router.ConnectionConfig{
-		SkipSSLValidation: config.SkipSSLValidation(),
-		DialTimeout:       config.DialTimeout(),
-	})
-
-	if err != nil {
-		return nil, err
-	}
+	routerClient := router.NewClient(routerConfig)
 	authWrapper.SetClient(uaaClient)
 	return routerClient, nil
 }
