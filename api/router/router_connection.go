@@ -54,7 +54,6 @@ func (connection *RouterConnection) Make(request *Request, responseToPopulate *R
 	httpResponse, err := connection.HTTPClient.Do(request.Request)
 	if err != nil {
 		// request could not be made, e.g., ssl handshake or tcp dial timeout
-		// TODO: check on this
 		return connection.processRequestErrors(request.Request, err)
 	}
 
@@ -91,7 +90,7 @@ func (connection *RouterConnection) populateResponse(httpResponse *http.Response
 
 	err = connection.handleStatusCodes(httpResponse, responseToPopulate)
 	if err != nil {
-		return err // TODO errConfig
+		return err
 	}
 
 	if responseToPopulate.Result != nil {

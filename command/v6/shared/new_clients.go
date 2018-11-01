@@ -112,12 +112,12 @@ func NewRouterClient(config command.Config, ui command.UI, uaaClient *uaa.Client
 		routerWrappers = append(routerWrappers, routerWrapper.NewRequestLogger(ui.RequestLoggerFileWriter(location)))
 	}
 
-	authWrapper := routerWrapper.NewUAAAuthentication(nil, config)
+	authWrapper := routerWrapper.NewUAAAuthentication(uaaClient, config)
+	errorWrapper := routerWrapper.NewErrorWrapper(config)
 
 	routerWrappers = append(routerWrappers, authWrapper)
 	routerConfig.Wrappers = routerWrappers
 
 	routerClient := router.NewClient(routerConfig)
-	authWrapper.SetClient(uaaClient)
 	return routerClient, nil
 }

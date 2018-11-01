@@ -54,8 +54,6 @@ func NewClient(config Config) *Client {
 		connection: NewConnection(config.ConnectionConfig),
 	}
 
-	// TODO Wrap Connection
-	// client.WrapConnection(NewErrorWrapper())
 	for _, wrapper := range config.Wrappers {
 		client.connection = wrapper.Wrap(client.connection)
 	}
