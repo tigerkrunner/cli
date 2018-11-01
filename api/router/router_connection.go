@@ -62,7 +62,7 @@ func (connection *RouterConnection) Make(request *Request, responseToPopulate *R
 
 func (*RouterConnection) handleStatusCodes(httpResponse *http.Response, responseToPopulate *Response) error {
 	if httpResponse.StatusCode >= 400 {
-		var errorResponse routererror.ErrorResponse
+		var errorResponse routererror.RawHTTPStatusError
 		err := json.Unmarshal(responseToPopulate.RawResponse, &errorResponse)
 		if err != nil {
 			return routererror.RawHTTPStatusError{

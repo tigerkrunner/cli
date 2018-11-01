@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var _ = FDescribe("create-shared-domain command", func() {
+var _ = Describe("create-shared-domain command", func() {
 	Context("Help", func() {
 		It("displays the help information", func() {
 			session := helpers.CF("create-shared-domain", "--help")

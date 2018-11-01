@@ -17,7 +17,7 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var _ = FDescribe("Verbose", func() {
+var _ = Describe("Verbose", func() {
 	Context("v2 legacy", func() {
 		DescribeTable("displays verbose output",
 			func(command func() *Session) {

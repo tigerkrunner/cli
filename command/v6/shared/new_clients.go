@@ -113,9 +113,9 @@ func NewRouterClient(config command.Config, ui command.UI, uaaClient *uaa.Client
 	}
 
 	authWrapper := routerWrapper.NewUAAAuthentication(uaaClient, config)
-	errorWrapper := routerWrapper.NewErrorWrapper(config)
+	errorWrapper := routerWrapper.NewErrorWrapper()
 
-	routerWrappers = append(routerWrappers, authWrapper)
+	routerWrappers = append(routerWrappers, authWrapper, errorWrapper)
 	routerConfig.Wrappers = routerWrappers
 
 	routerClient := router.NewClient(routerConfig)
