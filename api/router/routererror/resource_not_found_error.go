@@ -1,7 +1,9 @@
 package routererror
 
-type ResourceNotFoundError struct{}
+type ResourceNotFoundError struct {
+	Message string
+}
 
-func (ResourceNotFoundError) Error() string {
-	return "resource not found"
+func (e ResourceNotFoundError) Error() string {
+	return e.Message
 }

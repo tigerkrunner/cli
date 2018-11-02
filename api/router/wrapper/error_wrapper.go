@@ -25,8 +25,11 @@ func (e *ErrorWrapper) Make(request *router.Request, passedResponse *router.Resp
 
 	if rawHTTPStatusErr, ok := err.(routererror.RawHTTPStatusError); ok {
 		if rawHTTPStatusErr.StatusCode == http.StatusNotFound {
-			return routererror.ResourceNotFoundError{}
+			var resourceNotFoundError routererror.ResourceNotFoundError
+			_ = json.Unmarshal(rawHTTPStatusErr.RawResponse, &resourceNotFoundError)
+			return resourceNotFoundError
 		}
+
 		if rawHTTPStatusErr.StatusCode == http.StatusUnauthorized {
 			var routingAPIErrorBody routererror.ErrorResponse
 			_ = json.Unmarshal(rawHTTPStatusErr.RawResponse, &routingAPIErrorBody)

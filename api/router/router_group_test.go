@@ -5,6 +5,7 @@ import (
 
 	. "code.cloudfoundry.org/cli/api/router"
 	"code.cloudfoundry.org/cli/api/router/routererror"
+	"code.cloudfoundry.org/cli/api/router/wrapper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/ghttp"
@@ -22,6 +23,7 @@ var _ = Describe("Router Groups", func() {
 
 		JustBeforeEach(func() {
 			fakeConfig = NewTestConfig()
+			fakeConfig.Wrappers = append([]ConnectionWrapper{wrapper.NewErrorWrapper()}, fakeConfig.Wrappers...)
 			client = NewTestRouterClient(fakeConfig)
 			routerGroup, executeErr = client.GetRouterGroupByName(routerGroupName)
 		})
@@ -39,10 +41,8 @@ var _ = Describe("Router Groups", func() {
 
 			It("returns the error", func() {
 				Expect(executeErr).To(HaveOccurred())
-				expectedErr := routererror.ErrorResponse{
-					Name:       "ResourceNotFoundError",
-					Message:    "Router Group 'not-a-real-router-group' not found",
-					StatusCode: http.StatusNotFound,
+				expectedErr := routererror.ResourceNotFoundError{
+					Message: "Router Group 'not-a-real-router-group' not found",
 				}
 				Expect(executeErr).To(MatchError(expectedErr))
 				Expect(routerGroup).To(Equal(RouterGroup{}))

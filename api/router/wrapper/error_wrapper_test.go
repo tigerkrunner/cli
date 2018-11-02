@@ -112,7 +112,9 @@ var _ = Describe("Error Wrapper", func() {
 			It("returns a ResourceNotFoundError", func() {
 				Expect(fakeConnection.MakeCallCount()).To(Equal(1))
 
-				Expect(makeErr).To(MatchError(routererror.ResourceNotFoundError{}))
+				Expect(makeErr).To(MatchError(routererror.ResourceNotFoundError{
+					Message: "Router Group 'not-a-thing' not found",
+				}))
 			})
 		})
 	})
