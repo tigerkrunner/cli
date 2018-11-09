@@ -10,7 +10,7 @@ import (
 
 var _ = FDescribe("domains command", func() {
 	Describe("help", func() {
-		FWhen("--help flag is set", func() {
+		When("--help flag is set", func() {
 			It("displays command usage to output", func() {
 				session := helpers.CF("domains", "--help")
 				Eventually(session).Should(Say("NAME:"))
@@ -24,7 +24,7 @@ var _ = FDescribe("domains command", func() {
 		})
 	})
 
-	FWhen("user is not logged in", func() {
+	When("user is not logged in", func() {
 		BeforeEach(func() {
 			helpers.LogoutCF()
 		})
@@ -51,7 +51,7 @@ var _ = FDescribe("domains command", func() {
 	})
 
 	When("logged in as admin", func() {
-		FWhen("no org is targeted", func() {
+		When("no org is targeted", func() {
 			BeforeEach(func() {
 				helpers.LoginCF()
 			})
@@ -84,7 +84,7 @@ var _ = FDescribe("domains command", func() {
 			})
 
 			When("the targeted org has shared domains", func() {
-				FIt("displays the shared domains and denotes that they are shared", func() {
+				It("displays the shared domains and denotes that they are shared", func() {
 					session := helpers.CF("domains")
 
 					Eventually(session).Should(Say(`Getting domains in org %s as admin\.\.\.`, orgName))

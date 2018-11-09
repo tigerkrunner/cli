@@ -4,6 +4,8 @@ import (
 	"code.cloudfoundry.org/cli/actor/sharedaction"
 	"code.cloudfoundry.org/cli/actor/v2action"
 	"code.cloudfoundry.org/cli/command"
+	"code.cloudfoundry.org/cli/command/v6/shared"
+	"code.cloudfoundry.org/cli/util/ui"
 )
 
 //go:generate counterfeiter . DomainsActor
@@ -26,12 +28,17 @@ func (cmd *DomainsCommand) Setup(config command.Config, ui command.UI) error {
 	cmd.Config = config
 	cmd.UI = ui
 	cmd.SharedActor = sharedaction.NewActor(config)
+	ccClient, uaaClient, err := shared.NewClients(config, ui, true)
+	if err != nil {
+		return err
+	}
+	cmd.Actor = v2action.NewActor(ccClient, uaaClient, config)
+
 	return nil
 }
 
 func (cmd DomainsCommand) Execute(args []string) error {
 	err := cmd.SharedActor.CheckTarget(true, false)
-
 	if err != nil {
 		return err
 	}
@@ -39,13 +46,6 @@ func (cmd DomainsCommand) Execute(args []string) error {
 	org := cmd.Config.TargetedOrganization()
 
 	user, err := cmd.Config.CurrentUser()
-
-	if err != nil {
-		return err
-	}
-
-	_, _, err = cmd.Actor.GetDomains(org.GUID)
-
 	if err != nil {
 		return err
 	}
@@ -54,6 +54,33 @@ func (cmd DomainsCommand) Execute(args []string) error {
 		"CurrentUser": user.Name,
 		"CurrentOrg":  org.Name,
 	})
+
+	domains, warnings, err := cmd.Actor.GetDomains(org.GUID)
+	cmd.UI.DisplayWarnings(warnings)
+	if err != nil {
+		return err
+	}
+
+	table := [][]string{
+		{
+			cmd.UI.TranslateText("name"),
+			cmd.UI.TranslateText("status"),
+			cmd.UI.TranslateText("type"),
+		},
+	}
+
+	for _, domain := range domains {
+		table = append(
+			table,
+			[]string{
+				domain.Name,
+				string(domain.Type),
+				string(domain.RouterGroupType),
+			},
+		)
+	}
+
+	cmd.UI.DisplayTableWithHeader("", table, ui.DefaultTableSpacePadding)
 
 	return err
 }

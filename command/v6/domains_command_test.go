@@ -5,7 +5,6 @@ import (
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/actor/v2action"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"code.cloudfoundry.org/cli/command/commandfakes"
 	. "code.cloudfoundry.org/cli/command/v6"
 	"code.cloudfoundry.org/cli/command/v6/v6fakes"
@@ -16,16 +15,15 @@ import (
 	. "github.com/onsi/gomega/gbytes"
 )
 
-var _ = FDescribe("Domains Command", func() {
+var _ = Describe("Domains Command", func() {
 	var (
 		cmd             DomainsCommand
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
 		fakeActor       *v6fakes.FakeDomainsActor
-		// fakeActorV3     *v6fakes.FakeOrgActorV3
-		binaryName string
-		executeErr error
+		binaryName      string
+		executeErr      error
 	)
 
 	BeforeEach(func() {
@@ -33,14 +31,12 @@ var _ = FDescribe("Domains Command", func() {
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
 		fakeActor = new(v6fakes.FakeDomainsActor)
-		// fakeActorV3 = new(v6fakes.FakeOrgActorV3)
 
 		cmd = DomainsCommand{
 			UI:          testUI,
 			Config:      fakeConfig,
 			SharedActor: fakeSharedActor,
 			Actor:       fakeActor,
-			// ActorV3:     fakeActorV3,
 		}
 
 		binaryName = "some-binary-name"
@@ -48,6 +44,12 @@ var _ = FDescribe("Domains Command", func() {
 
 	JustBeforeEach(func() {
 		executeErr = cmd.Execute(nil)
+	})
+
+	When("the user provides arguments", func() {
+		It("fails with a no arguments accepted error", func() {
+			Expect(executeErr).To(MatchError(NoArgumentsAcceptedError{}))
+		})
 	})
 
 	When("the user is not logged in", func() {
@@ -100,6 +102,7 @@ var _ = FDescribe("Domains Command", func() {
 					})
 
 					It("fails and returns an error", func() {
+						Expect(testUI.Out).To(Say(`Getting domains in org some-org as some-user\.\.\.`))
 						Expect(executeErr).To(MatchError(actionerror.OrganizationNotFoundError{Name: targetedOrg.Name}))
 						actualOrgGUID := fakeActor.GetDomainsArgsForCall(0)
 						Expect(actualOrgGUID).To(Equal(targetedOrg.GUID))
@@ -107,8 +110,8 @@ var _ = FDescribe("Domains Command", func() {
 					})
 
 					It("displays all warnings", func() {
-						Expect(testUI.Out).To(Say(`warning-1`))
-						Expect(testUI.Out).To(Say(`warning-2`))
+						Expect(testUI.Err).To(Say(`warning-1`))
+						Expect(testUI.Err).To(Say(`warning-2`))
 					})
 				})
 
@@ -120,24 +123,28 @@ var _ = FDescribe("Domains Command", func() {
 
 					BeforeEach(func() {
 						privateDomain = v2action.Domain{
-							Name: "private.domain",
-							Type: constant.PrivateDomain,
+							Name:            "private.domain",
+							Type:            "some-domain-type-1",
+							RouterGroupType: "zombo",
 						}
 
 						sharedDomain = v2action.Domain{
-							Name: "shared.domain",
-							Type: constant.SharedDomain,
+							Name:            "shared.domain",
+							Type:            "some-domain-type-2",
+							RouterGroupType: "tcp",
 						}
 						fakeActor.GetDomainsReturns([]v2action.Domain{privateDomain, sharedDomain}, v2action.Warnings{"warning-1", "warning-2"}, nil)
 					})
 
 					It("displays all domains", func() {
-						Fail("NYI")
+						Expect(testUI.Out).To(Say(`name\s+status\s+type`))
+						Expect(testUI.Out).To(Say(`private.domain\s+some-domain-type-1\s+zombo`))
+						Expect(testUI.Out).To(Say(`shared.domain\s+some-domain-type-2\s+tcp`))
 					})
 
 					It("displays all warnings", func() {
-						Expect(testUI.Out).To(Say(`warning-1`))
-						Expect(testUI.Out).To(Say(`warning-2`))
+						Expect(testUI.Err).To(Say(`warning-1`))
+						Expect(testUI.Err).To(Say(`warning-2`))
 					})
 				})
 			})
