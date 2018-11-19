@@ -609,26 +609,28 @@ var _ = Describe("Buildpack", func() {
 
 	Describe("UpdateBuildpackByNameAndStack", func() {
 		var (
-			expectedError error
-			warnings      Warnings
-			executeErr    error
-			newPosition   types.NullInt
-			newLocked     types.NullBool
-			newEnabled    types.NullBool
-			currentStack  string
-			newStack      string
+			warnings     Warnings
+			executeErr   error
+			newPosition  types.NullInt
+			newLocked    types.NullBool
+			newEnabled   types.NullBool
+			currentStack string
+			newStack     string
 		)
+
+		BeforeEach(func() {
+			newPosition = types.NullInt{}
+			newLocked = types.NullBool{}
+			newEnabled = types.NullBool{}
+			currentStack = ""
+			newStack = ""
+		})
 
 		JustBeforeEach(func() {
 			_, warnings, executeErr = actor.UpdateBuildpackByNameAndStack("some-bp-name", currentStack, newPosition, newLocked, newEnabled, newStack)
 		})
 
 		When("current stack is an empty string", func() {
-			BeforeEach(func() {
-				currentStack = ""
-				newStack = ""
-			})
-
 			It("gets the buildpack by name only", func() {
 				args := fakeCloudControllerClient.GetBuildpacksArgsForCall(0)
 				Expect(len(args)).To(Equal(1))
@@ -639,7 +641,6 @@ var _ = Describe("Buildpack", func() {
 		When("a non-empty current stack name is passed", func() {
 			BeforeEach(func() {
 				currentStack = "some-stack"
-				newStack = ""
 			})
 
 			It("gets the buildpack by name and current stack", func() {
@@ -651,8 +652,9 @@ var _ = Describe("Buildpack", func() {
 		})
 
 		When("getting the buildpack fails", func() {
+			var expectedError error
+
 			BeforeEach(func() {
-				newStack = ""
 				expectedError = errors.New("some-error")
 				fakeCloudControllerClient.GetBuildpacksReturns(nil, nil, expectedError)
 			})
@@ -664,7 +666,6 @@ var _ = Describe("Buildpack", func() {
 
 		When("getting the buildpack succeeds", func() {
 			BeforeEach(func() {
-				newStack = ""
 				fakeCloudControllerClient.GetBuildpacksReturns([]ccv2.Buildpack{
 					ccv2.Buildpack{}}, ccv2.Warnings{"get warning"}, nil)
 			})
@@ -678,13 +679,6 @@ var _ = Describe("Buildpack", func() {
 			})
 
 			When("no changes to the buildpack record are specified", func() {
-				BeforeEach(func() {
-					newPosition = types.NullInt{}
-					newLocked = types.NullBool{}
-					newEnabled = types.NullBool{}
-					newStack = ""
-				})
-
 				It("doesn't call the CC API", func() {
 					Expect(fakeCloudControllerClient.UpdateBuildpackCallCount()).To(Equal(0))
 				})
@@ -693,8 +687,6 @@ var _ = Describe("Buildpack", func() {
 			When("a new position is specified", func() {
 				BeforeEach(func() {
 					newPosition = types.NullInt{IsSet: true, Value: 3}
-					newLocked = types.NullBool{}
-					newEnabled = types.NullBool{}
 				})
 
 				It("makes an API call to update the position", func() {
@@ -706,9 +698,7 @@ var _ = Describe("Buildpack", func() {
 
 			When("a new locked state is specified", func() {
 				BeforeEach(func() {
-					newPosition = types.NullInt{}
 					newLocked = types.NullBool{IsSet: true, Value: true}
-					newEnabled = types.NullBool{}
 				})
 
 				It("makes an API call to update the locked state", func() {
@@ -720,8 +710,6 @@ var _ = Describe("Buildpack", func() {
 
 			When("a new enabled state is specified", func() {
 				BeforeEach(func() {
-					newPosition = types.NullInt{}
-					newLocked = types.NullBool{}
 					newEnabled = types.NullBool{IsSet: true, Value: true}
 				})
 
@@ -734,9 +722,6 @@ var _ = Describe("Buildpack", func() {
 
 			When("a new stack is specified", func() {
 				BeforeEach(func() {
-					newPosition = types.NullInt{}
-					newLocked = types.NullBool{}
-					newEnabled = types.NullBool{}
 					newStack = "some-new-stack"
 					fakeCloudControllerClient.GetStacksReturns(
 						[]ccv2.Stack{{Name: newStack}},
@@ -787,7 +772,6 @@ var _ = Describe("Buildpack", func() {
 					newPosition = types.NullInt{IsSet: true, Value: 3}
 					newLocked = types.NullBool{IsSet: true, Value: true}
 					newEnabled = types.NullBool{IsSet: true, Value: true}
-					newStack = ""
 				})
 
 				When("updating the buildpack record returns an error", func() {
