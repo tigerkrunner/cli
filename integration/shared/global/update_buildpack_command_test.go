@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega/ghttp"
 )
 
-var _ = FDescribe("update-buildpack command", func() {
+var _ = Describe("update-buildpack command", func() {
 	var (
 		buildpackName string
 		username      string
@@ -181,7 +181,7 @@ var _ = FDescribe("update-buildpack command", func() {
 					})
 
 					When("--assign-stack is given", func() {
-						FIt("displays an error and exits", func() {
+						It("displays an error and exits", func() {
 							session := helpers.CF("update-buildpack", buildpackName, "--assign-stack", stacks[0])
 
 							Eventually(session.Err).Should(Say(`Buildpack %s already exists with a stack association`, buildpackName))
