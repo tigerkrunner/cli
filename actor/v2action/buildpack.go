@@ -176,16 +176,27 @@ func (actor *Actor) UploadBuildpack(GUID string, pathToBuildpackBits string, pro
 	return Warnings(warnings), nil
 }
 
-// GetBuildpackByName returns a given buildpack with the provided name. It
-// assumes the stack name is empty.
-func (actor *Actor) GetBuildpackByName(name string) (Buildpack, Warnings, error) {
+func (actor *Actor) getBuildpacksByName(name string) ([]Buildpack, Warnings, error) {
 	bpName := ccv2.Filter{
 		Type:     constant.NameFilter,
 		Operator: constant.EqualOperator,
 		Values:   []string{name},
 	}
 
-	buildpacks, warnings, err := actor.CloudControllerClient.GetBuildpacks(bpName)
+	ccv2Buildpacks, warnings, err := actor.CloudControllerClient.GetBuildpacks(bpName)
+
+	var buildpacks []Buildpack
+	for _, buildpack := range ccv2Buildpacks {
+		buildpacks = append(buildpacks, Buildpack(buildpack))
+	}
+
+	return buildpacks, Warnings(warnings), err
+}
+
+// GetBuildpackByName returns a given buildpack with the provided name. It
+// assumes the stack name is empty.
+func (actor *Actor) GetBuildpackByName(name string) (Buildpack, Warnings, error) {
+	buildpacks, warnings, err := actor.getBuildpacksByName(name)
 	if err != nil {
 		return Buildpack{}, Warnings(warnings), err
 	}
@@ -298,19 +309,41 @@ func (actor *Actor) UpdateBuildpackByNameAndStack(name, currentStack string, pos
 		return "", warnings, err
 	}
 
-	buildpack, execWarnings, err = actor.getBuildpack(name, currentStack)
+	var buildpacks []Buildpack
+
+	if len(currentStack) > 0 {
+		buildpack, execWarnings, err = actor.GetBuildpackByNameAndStack(name, currentStack)
+		buildpacks = []Buildpack{buildpack}
+	} else {
+		buildpacks, execWarnings, err = actor.getBuildpacksByName(name)
+	}
+
 	warnings = append(warnings, execWarnings...)
-
 	if err != nil {
 		return "", warnings, err
 	}
 
-	err = validateStackChange(buildpack, newStack)
-
-	if err != nil {
-		return "", warnings, err
+	if len(buildpacks) == 0 {
+		return "", warnings, actionerror.BuildpackNotFoundError{BuildpackName: name}
 	}
 
+	allBuildpacksHaveStacks := true
+	for _, buildpack := range buildpacks {
+		if len(buildpack.Stack) == 0 {
+			allBuildpacksHaveStacks = false
+		}
+	}
+
+	if allBuildpacksHaveStacks && len(newStack) > 0 {
+		return "", warnings, actionerror.BuildpackStackChangeError{
+			BuildpackName: buildpacks[0].Name,
+			BinaryName:    actor.Config.BinaryName(),
+		}
+	} else if allBuildpacksHaveStacks && len(buildpacks) > 1 {
+		return "", Warnings(warnings), actionerror.MultipleBuildpacksFoundError{BuildpackName: name}
+	}
+
+	buildpack = buildpacks[0]
 	if position != buildpack.Position || locked != buildpack.Enabled || enabled != buildpack.Enabled || newStack != buildpack.Stack {
 		buildpack.Position = position
 		buildpack.Locked = locked
@@ -345,13 +378,6 @@ func (actor *Actor) checkIfNewStackExists(newStack string) (Warnings, error) {
 		}
 	}
 	return nil, nil
-}
-
-func (actor *Actor) getBuildpack(name, currentStack string) (Buildpack, Warnings, error) {
-	if len(currentStack) > 0 {
-		return actor.GetBuildpackByNameAndStack(name, currentStack)
-	}
-	return actor.GetBuildpackByName(name)
 }
 
 // Zipit zips the source into a .zip file in the target dir

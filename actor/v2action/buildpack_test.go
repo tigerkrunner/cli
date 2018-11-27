@@ -23,11 +23,13 @@ var _ = Describe("Buildpack", func() {
 	var (
 		actor                     *Actor
 		fakeCloudControllerClient *v2actionfakes.FakeCloudControllerClient
+		fakeConfig                *v2actionfakes.FakeConfig
 	)
 
 	BeforeEach(func() {
 		fakeCloudControllerClient = new(v2actionfakes.FakeCloudControllerClient)
-		actor = NewActor(fakeCloudControllerClient, nil, nil)
+		fakeConfig = new(v2actionfakes.FakeConfig)
+		actor = NewActor(fakeCloudControllerClient, nil, fakeConfig)
 	})
 
 	Describe("Buildpack", func() {
@@ -607,15 +609,17 @@ var _ = Describe("Buildpack", func() {
 		})
 	})
 
-	Describe("UpdateBuildpackByNameAndStack", func() {
+	FDescribe("UpdateBuildpackByNameAndStack", func() {
 		var (
-			warnings     Warnings
-			executeErr   error
 			newPosition  types.NullInt
 			newLocked    types.NullBool
 			newEnabled   types.NullBool
 			currentStack string
 			newStack     string
+
+			buildpackGUID string
+			warnings      Warnings
+			executeErr    error
 		)
 
 		BeforeEach(func() {
@@ -627,7 +631,7 @@ var _ = Describe("Buildpack", func() {
 		})
 
 		JustBeforeEach(func() {
-			_, warnings, executeErr = actor.UpdateBuildpackByNameAndStack("some-bp-name", currentStack, newPosition, newLocked, newEnabled, newStack)
+			buildpackGUID, warnings, executeErr = actor.UpdateBuildpackByNameAndStack("some-bp-name", currentStack, newPosition, newLocked, newEnabled, newStack)
 		})
 
 		When("current stack is an empty string", func() {
@@ -644,10 +648,34 @@ var _ = Describe("Buildpack", func() {
 			})
 
 			It("gets the buildpack by name and current stack", func() {
+				Expect(fakeCloudControllerClient.GetBuildpacksCallCount()).To(Equal(1))
 				args := fakeCloudControllerClient.GetBuildpacksArgsForCall(0)
 				Expect(len(args)).To(Equal(2))
 				Expect(args[0].Values[0]).To(Equal("some-bp-name"))
 				Expect(args[1].Values[0]).To(Equal(currentStack))
+			})
+
+			When("the cc responds successfully", func() {
+				BeforeEach(func() {
+					fakeCloudControllerClient.GetBuildpacksReturns([]ccv2.Buildpack{{GUID: "some-guid"}}, ccv2.Warnings{"warning-1", "warning-2"}, nil)
+				})
+
+				It("returns the buildpack GUID", func() {
+					Expect(fakeCloudControllerClient.GetBuildpacksCallCount()).To(Equal(1))
+					Expect(executeErr).ToNot(HaveOccurred())
+					Expect(buildpackGUID).To(Equal("some-guid"))
+				})
+			})
+
+			When("the cc responds with an error", func() {
+				BeforeEach(func() {
+					fakeCloudControllerClient.GetBuildpacksReturns([]ccv2.Buildpack{}, ccv2.Warnings{"warning-1", "warning-2"}, errors.New("boom!"))
+				})
+
+				It("returns an error and all warnings", func() {
+					Expect(executeErr).To(MatchError("boom!"))
+					Expect(warnings).To(ConsistOf("warning-1", "warning-2"))
+				})
 			})
 		})
 
@@ -664,10 +692,38 @@ var _ = Describe("Buildpack", func() {
 			})
 		})
 
-		When("getting the buildpack succeeds", func() {
+		When("getting the buildpack returns an empty list", func() {
+			BeforeEach(func() {
+				fakeCloudControllerClient.GetBuildpacksReturns([]ccv2.Buildpack{}, ccv2.Warnings{"warning-1", "warning-2"}, nil)
+			})
+
+			It("returns a BuildpackNotFoundError and all warnings", func() {
+				Expect(executeErr).To(MatchError(actionerror.BuildpackNotFoundError{BuildpackName: "some-bp-name"}))
+				Expect(warnings).To(ConsistOf("warning-1", "warning-2"))
+			})
+		})
+
+		When("getting the buildpack returns multiple buildpacks with stacks", func() {
+			BeforeEach(func() {
+				fakeCloudControllerClient.GetBuildpacksReturns(
+					[]ccv2.Buildpack{
+						{GUID: "some guid", Name: "some-bp-name", Stack: "some-stack"},
+						{GUID: "some other guid", Name: "some-bp-name", Stack: "some-stack-2"},
+					},
+					ccv2.Warnings{"warning-1", "warning-2"},
+					nil)
+			})
+
+			It("returns an error that multiple buildpacks were found and returns all warnings", func() {
+				Expect(executeErr).To(MatchError(actionerror.MultipleBuildpacksFoundError{BuildpackName: "some-bp-name"}))
+				Expect(warnings).To(ConsistOf("warning-1", "warning-2"))
+			})
+		})
+
+		When("getting the buildpack successfully returns a single buildpack", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetBuildpacksReturns([]ccv2.Buildpack{
-					ccv2.Buildpack{}}, ccv2.Warnings{"get warning"}, nil)
+					ccv2.Buildpack{GUID: "some guid", Name: "some-bp-name"}}, ccv2.Warnings{"get warning"}, nil)
 			})
 
 			It("does not return an error", func() {
@@ -739,13 +795,51 @@ var _ = Describe("Buildpack", func() {
 
 					When("the buildpack already has a stack association", func() {
 						BeforeEach(func() {
+							fakeConfig.BinaryNameReturns("faceman")
 							fakeCloudControllerClient.GetBuildpacksReturns([]ccv2.Buildpack{
 								ccv2.Buildpack{Stack: "some-old-stack-name", Name: "some-bp-name"}}, ccv2.Warnings{"get warning"}, nil)
 						})
 
 						It("return the error and warnings", func() {
-							Expect(executeErr).To(MatchError(actionerror.BuildpackStackChangeError{BuildpackName: "some-bp-name"}))
+							Expect(executeErr).To(MatchError(actionerror.BuildpackStackChangeError{BuildpackName: "some-bp-name", BinaryName: "faceman"}))
 							Expect(warnings).To(ConsistOf("get warning"))
+						})
+
+						When("there are multiple buildpacks with the same name with stack associations", func() {
+							BeforeEach(func() {
+								fakeCloudControllerClient.GetBuildpacksReturns([]ccv2.Buildpack{
+									ccv2.Buildpack{
+										Stack: "some-stack-name",
+										Name:  "some-bp-name",
+									},
+									ccv2.Buildpack{
+										Stack: "some-other-stack-name",
+										Name:  "some-bp-name",
+									}}, ccv2.Warnings{"warning-1", "warning-2"}, nil)
+							})
+
+							It("returns a BuildpackStackChangeError and warnings", func() {
+								Expect(executeErr).To(MatchError(actionerror.BuildpackStackChangeError{BuildpackName: "some-bp-name", BinaryName: "faceman"}))
+								Expect(warnings).To(ConsistOf("warning-1", "warning-2"))
+							})
+						})
+
+						When("there are multiple buildpacks with the same name and one has no stack association", func() {
+							BeforeEach(func() {
+								fakeCloudControllerClient.GetBuildpacksReturns([]ccv2.Buildpack{
+									ccv2.Buildpack{
+										Stack: "some-stack-name",
+										Name:  "some-bp-name",
+									},
+									ccv2.Buildpack{
+										Name: "some-bp-name",
+									}}, ccv2.Warnings{"warning-1", "warning-2"}, nil)
+							})
+
+							It("succeeds and returns all warnings", func() {
+								Expect(executeErr).NotTo(HaveOccurred())
+								Expect(warnings).To(ConsistOf("warning-1", "warning-2"))
+							})
 						})
 					})
 				})
@@ -772,6 +866,17 @@ var _ = Describe("Buildpack", func() {
 					newPosition = types.NullInt{IsSet: true, Value: 3}
 					newLocked = types.NullBool{IsSet: true, Value: true}
 					newEnabled = types.NullBool{IsSet: true, Value: true}
+				})
+
+				It("updates the buildpack using the correct buildpack values", func() {
+					Expect(fakeCloudControllerClient.UpdateBuildpackCallCount()).To(Equal(1))
+					Expect(fakeCloudControllerClient.UpdateBuildpackArgsForCall(0)).To(Equal(ccv2.Buildpack{
+						GUID:     "some guid",
+						Name:     "some-bp-name",
+						Position: types.NullInt{IsSet: true, Value: 3},
+						Locked:   types.NullBool{IsSet: true, Value: true},
+						Enabled:  types.NullBool{IsSet: true, Value: true},
+					}))
 				})
 
 				When("updating the buildpack record returns an error", func() {
