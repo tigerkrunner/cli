@@ -13,6 +13,16 @@ type FakeApiActor struct {
 	clearTargetMutex       sync.RWMutex
 	clearTargetArgsForCall []struct {
 	}
+	CloudControllerAPIVersionStub        func() string
+	cloudControllerAPIVersionMutex       sync.RWMutex
+	cloudControllerAPIVersionArgsForCall []struct {
+	}
+	cloudControllerAPIVersionReturns struct {
+		result1 string
+	}
+	cloudControllerAPIVersionReturnsOnCall map[int]struct {
+		result1 string
+	}
 	SetTargetStub        func(v2action.TargetSettings) (v2action.Warnings, error)
 	setTargetMutex       sync.RWMutex
 	setTargetArgsForCall []struct {
@@ -51,6 +61,58 @@ func (fake *FakeApiActor) ClearTargetCalls(stub func()) {
 	fake.clearTargetMutex.Lock()
 	defer fake.clearTargetMutex.Unlock()
 	fake.ClearTargetStub = stub
+}
+
+func (fake *FakeApiActor) CloudControllerAPIVersion() string {
+	fake.cloudControllerAPIVersionMutex.Lock()
+	ret, specificReturn := fake.cloudControllerAPIVersionReturnsOnCall[len(fake.cloudControllerAPIVersionArgsForCall)]
+	fake.cloudControllerAPIVersionArgsForCall = append(fake.cloudControllerAPIVersionArgsForCall, struct {
+	}{})
+	fake.recordInvocation("CloudControllerAPIVersion", []interface{}{})
+	fake.cloudControllerAPIVersionMutex.Unlock()
+	if fake.CloudControllerAPIVersionStub != nil {
+		return fake.CloudControllerAPIVersionStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.cloudControllerAPIVersionReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeApiActor) CloudControllerAPIVersionCallCount() int {
+	fake.cloudControllerAPIVersionMutex.RLock()
+	defer fake.cloudControllerAPIVersionMutex.RUnlock()
+	return len(fake.cloudControllerAPIVersionArgsForCall)
+}
+
+func (fake *FakeApiActor) CloudControllerAPIVersionCalls(stub func() string) {
+	fake.cloudControllerAPIVersionMutex.Lock()
+	defer fake.cloudControllerAPIVersionMutex.Unlock()
+	fake.CloudControllerAPIVersionStub = stub
+}
+
+func (fake *FakeApiActor) CloudControllerAPIVersionReturns(result1 string) {
+	fake.cloudControllerAPIVersionMutex.Lock()
+	defer fake.cloudControllerAPIVersionMutex.Unlock()
+	fake.CloudControllerAPIVersionStub = nil
+	fake.cloudControllerAPIVersionReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *FakeApiActor) CloudControllerAPIVersionReturnsOnCall(i int, result1 string) {
+	fake.cloudControllerAPIVersionMutex.Lock()
+	defer fake.cloudControllerAPIVersionMutex.Unlock()
+	fake.CloudControllerAPIVersionStub = nil
+	if fake.cloudControllerAPIVersionReturnsOnCall == nil {
+		fake.cloudControllerAPIVersionReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.cloudControllerAPIVersionReturnsOnCall[i] = struct {
+		result1 string
+	}{result1}
 }
 
 func (fake *FakeApiActor) SetTarget(arg1 v2action.TargetSettings) (v2action.Warnings, error) {
@@ -121,6 +183,8 @@ func (fake *FakeApiActor) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.clearTargetMutex.RLock()
 	defer fake.clearTargetMutex.RUnlock()
+	fake.cloudControllerAPIVersionMutex.RLock()
+	defer fake.cloudControllerAPIVersionMutex.RUnlock()
 	fake.setTargetMutex.RLock()
 	defer fake.setTargetMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

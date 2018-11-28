@@ -53,7 +53,7 @@ var _ = Describe("api Command", func() {
 		When("the API is set, the user is logged in and an org and space are targeted", func() {
 			BeforeEach(func() {
 				fakeConfig.TargetReturns("some-api-target")
-				fakeConfig.APIVersionReturns("100.200.300")
+				fakeActor.CloudControllerAPIVersionReturns("100.200.300")
 				fakeConfig.CurrentUserReturns(configv3.User{
 					Name: "admin",
 				}, nil)
@@ -98,7 +98,7 @@ var _ = Describe("api Command", func() {
 					cmd.OptionalArgs.URL = CCAPI
 
 					fakeConfig.TargetReturns("some-api-target")
-					fakeConfig.APIVersionReturns("100.200.300")
+					fakeActor.CloudControllerAPIVersionReturns("100.200.300")
 				})
 
 				When("the url has verified SSL", func() {
@@ -182,6 +182,7 @@ api version:    100.200.300`,
 			BeforeEach(func() {
 				cmd.OptionalArgs.URL = "https://api.foo.com"
 				fakeConfig.TargetReturns("something")
+				fakeActor.CloudControllerAPIVersionReturns("100.200.300")
 			})
 
 			It("outputs a 'not logged in' message", func() {
@@ -196,6 +197,7 @@ api version:    100.200.300`,
 				cmd.OptionalArgs.URL = "https://api.foo.com"
 				fakeConfig.TargetReturns("something")
 				fakeConfig.CurrentUserReturns(configv3.User{Name: "banana"}, nil)
+				fakeActor.CloudControllerAPIVersionReturns("100.200.300")
 			})
 
 			It("does not output a 'not logged in' message", func() {
@@ -209,7 +211,7 @@ api version:    100.200.300`,
 			BeforeEach(func() {
 				cmd.OptionalArgs.URL = "https://api.foo.com"
 				fakeConfig.TargetReturns("something")
-				fakeConfig.APIVersionReturns("1.2.3")
+				fakeActor.CloudControllerAPIVersionReturns("1.2.3")
 			})
 
 			It("outputs a warning", func() {

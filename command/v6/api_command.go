@@ -14,6 +14,7 @@ import (
 
 type ApiActor interface {
 	ClearTarget()
+	CloudControllerAPIVersion() string
 	SetTarget(settings v2action.TargetSettings) (v2action.Warnings, error)
 }
 
@@ -60,16 +61,16 @@ func (cmd *ApiCommand) Execute(args []string) error {
 		return nil
 	}
 
-	if cmd.Config.APIVersion() != "" {
-		err := command.WarnIfAPIVersionBelowSupportedMinimum(cmd.Config.APIVersion(), cmd.UI)
-		if err != nil {
-			return err
-		}
+	// if cmd.Config.APIVersion() != "" {
+	err := command.WarnIfAPIVersionBelowSupportedMinimum(cmd.Actor.CloudControllerAPIVersion(), cmd.UI)
+	if err != nil {
+		return err
 	}
+	// }
 
 	cmd.UI.DisplayKeyValueTable("", [][]string{
 		{cmd.UI.TranslateText("api endpoint:"), cmd.Config.Target()},
-		{cmd.UI.TranslateText("api version:"), cmd.Config.APIVersion()},
+		{cmd.UI.TranslateText("api version:"), cmd.Actor.CloudControllerAPIVersion()},
 	}, 3)
 
 	user, err := cmd.Config.CurrentUser()
