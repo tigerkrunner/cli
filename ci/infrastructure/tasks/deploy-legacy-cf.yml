@@ -41,13 +41,15 @@ run:
       eval "$(bbl print-env)"
     popd
 
+    bosh env
+
     bosh upload-stemcell -n "https://s3.amazonaws.com/bosh-gce-light-stemcells/light-bosh-stemcell-3312.51-google-kvm-ubuntu-trusty-go_agent.tgz"
 
     cat << EOF > vars.yml
     client-secret: ${CLIENT_SECRET}
     EOF
 
-    bosh -d cf deploy cli-ci/ci/infrastructure/assets/legacy-cf-deployment.yml -n \
+    bosh -d cf deploy /home/pivotal/go/src/code.cloudfoundry.org/cli/ci/infrastructure/assets/legacy-cf-deployment.yml \
       -o $cli_operations_dir/legacy/gcp.yml \
       -o $cli_operations_dir/legacy/scale-to-one-az.yml \
       -o $cli_operations_dir/legacy/add-reserved-routes.yml \

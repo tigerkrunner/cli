@@ -82,18 +82,18 @@
 - type: replace
   path: /instance_groups/name=mysql/networks/name=private/static_ips
   value:
-  - &mysql_ip 10.0.16.193
+  - &mysql_ip 10.0.255.193
 - type: replace
   path: /instance_groups/name=consul/networks/name=private/static_ips
   value: &consul_ips
-  - 10.0.16.194
-  - 10.0.16.195
-  - 10.0.16.196
+  - 10.0.255.194
+  - 10.0.255.195
+  - 10.0.255.196
 - type: replace
   path: /instance_groups/name=nats/networks/name=private/static_ips
   value: &nats_ips
-  - 10.0.16.197
-  - 10.0.16.198
+  - 10.0.255.197
+  - 10.0.255.198
 
 # ------ insert correct ips -------
 - type: replace
