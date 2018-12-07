@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var _ = FDescribe("curl command", func() {
+var _ = Describe("curl command", func() {
 	var ExpectHelpText = func(session *Session) {
 		Eventually(session).Should(Say(`NAME:\n`))
 		Eventually(session).Should(Say(`curl - Executes a request to the targeted API endpoint\n`))
@@ -115,6 +115,17 @@ var _ = FDescribe("curl command", func() {
 			}`
 			Eventually(session).Should(Exit(0))
 			Expect(session.Out.Contents()).To(MatchJSON(expectedJSON))
+		})
+	})
+	Context("User Agent", func() {
+		It("sets the User-Agent Header to match the CLI version", func() {
+			session := helpers.CF("curl", "/v2/info", "-v")
+			Eventually(session).Should(Exit(0))
+
+			//TODO The user agent is different in refactored commands, so this should when
+			// we refactor cf curl
+			versionPattern := `\d{1,}\.\d{2,}\.\d+\+[a-f0-9]+\.\d{4}-\d{2}-\d{2} / \w`
+			Expect(session).To(Say(`User-Agent: go-cli %s`, versionPattern))
 		})
 	})
 
@@ -260,21 +271,12 @@ var _ = FDescribe("curl command", func() {
 							Expect(session).To(Say("RESPONSE:"))
 						})
 
-						It("overrides the value of Authorization header", func() {
-							session := helpers.CF("curl", "/v2/apps", "-H", "Authorization: bearer some-token", "-v")
-							Eventually(session).Should(Exit(0))
-
-							Expect(session).To(Say("REQUEST:"))
-							Expect(session).To(Say("Authorization: bearer some-token"))
-							Expect(session).To(Say("RESPONSE:"))
-						})
-
 						It("overrides the value of Content-Type header", func() {
 							session := helpers.CF("curl", "/v2/apps", "-H", "Content-Type: application/xml", "-v")
 							Eventually(session).Should(Exit(0))
 
 							Expect(session).To(Say("REQUEST:"))
-							Expect(session).To(Say("Content-Type: smith"))
+							Expect(session).To(Say("Content-Type: application/xml"))
 							Expect(session).To(Say("RESPONSE:"))
 						})
 					})
@@ -344,7 +346,11 @@ var _ = FDescribe("curl command", func() {
 
 					When("the file is a symlink", func() {
 						It("follows the symlink", func() {
-							Fail("TODO")
+							linkPath := filepath.Join(dir, "link-name.json")
+							Expect(os.Symlink(filePath, linkPath)).To(Succeed())
+							session := helpers.CF("curl", "-d", "@"+linkPath, "/v2/spaces")
+							Eventually(session).Should(Exit(0))
+							Eventually(helpers.CF("space", spaceName)).Should(Exit(0))
 						})
 					})
 				})
@@ -446,15 +452,23 @@ var _ = FDescribe("curl command", func() {
 
 			Context("Refresh Token", func() {
 				When("the auth token is invalid", func() {
-					It("generates a new auth token by using the refresh token", func() {
-						Fail("TODO")
-					})
-				})
-			})
+					var spaceGUID, spaceName string
 
-			Context("User Agent", func() {
-				It("sets the User-Agent Header to match the CLI version", func() {
-					Fail("TODO")
+					BeforeEach(func() {
+						spaceName = helpers.NewSpaceName()
+						helpers.CreateSpace(spaceName)
+						spaceGUID = helpers.GetSpaceGUID(spaceName)
+					})
+
+					It("generates a new auth token by using the refresh token", func() {
+						path := fmt.Sprintf("/v2/spaces/%s", spaceGUID)
+						session := helpers.CF("curl", path, "-H", "Authorization: bearer some-token", "-X", "DELETE", "-v")
+						Eventually(session).Should(Exit(0))
+
+						Expect(session).To(Say("POST /oauth/token"))
+
+						Eventually(helpers.CF("space", spaceName)).Should(Exit(1))
+					})
 				})
 			})
 		})
