@@ -147,7 +147,7 @@ func fetchAPIVersion() ccRoot {
 	cacheLock.Lock()
 	defer cacheLock.Unlock()
 	if CcRootCache == nil {
-		session := CF("curl", "/")
+		session := NonExperimentalCurl("/")
 		Eventually(session).Should(Exit(0))
 		var result ccRoot
 		err := json.Unmarshal(session.Out.Contents(), &result)

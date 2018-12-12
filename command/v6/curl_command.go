@@ -3,6 +3,7 @@ package v6
 import (
 	"code.cloudfoundry.org/cli/command"
 	"code.cloudfoundry.org/cli/command/flag"
+	"code.cloudfoundry.org/cli/command/translatableerror"
 )
 
 //go:generate counterfeiter . CurlActor
@@ -29,6 +30,10 @@ func (CurlCommand) Setup(config command.Config, ui command.UI) error {
 }
 
 func (cmd CurlCommand) Execute(args []string) error {
+	if !cmd.Config.Experimental() {
+		return translatableerror.UnrefactoredCommandError{}
+	}
+
 	requestHeaders, responseHeaders, responseJSON := cmd.Actor.MakeRequest(cmd.RequiredArgs.Path)
 	cmd.UI.DisplayText(requestHeaders)
 	cmd.UI.DisplayText(responseHeaders)

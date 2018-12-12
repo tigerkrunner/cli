@@ -66,7 +66,7 @@ for stack in $(cf stacks | tail -n +5 | awk '{print $1}'); do
 done
 cf buildpacks | grep -i -e ^integration-buildpack | awk '{print $1}' | xargs_func cf delete-buildpack -f
 
-CF_USERS=$(cf curl /v2/users | grep total_results | grep -o '[0-9]\+')
+CF_USERS=$(CF_CLI_EXPERIMENTAL=false cf curl /v2/users | grep total_results | grep -o '[0-9]\+')
 USER_PAGES=$(( $CF_USERS / 50 + 1))
 
 for ((i=1; i<=${USER_PAGES}; i++)) ; do
