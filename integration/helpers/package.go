@@ -70,7 +70,7 @@ func getFirstAppPackageGuid(appName string) string {
 
 func downloadFirstAppPackage(appName string, tmpZipFilepath string) {
 	appGUID := getFirstAppPackageGuid(appName)
-	session := CF("curl", fmt.Sprintf("/v3/packages/%s/download", appGUID), "--output", tmpZipFilepath)
+	session := NonExperimentalCurl(fmt.Sprintf("/v3/packages/%s/download", appGUID), "--output", tmpZipFilepath)
 	Eventually(session).Should(Exit(0))
 	return
 }
@@ -98,7 +98,7 @@ func VerifyAppPackageContentsV2(appName string, files ...string) {
 
 func downloadFirstAppBits(appName string, tmpZipFilepath string) {
 	appGUID := AppGUID(appName)
-	session := CF("curl", fmt.Sprintf("/v2/apps/%s/download", appGUID), "--output", tmpZipFilepath)
+	session := NonExperimentalCurl(fmt.Sprintf("/v2/apps/%s/download", appGUID), "--output", tmpZipFilepath)
 	Eventually(session).Should(Exit(0))
 	return
 }
