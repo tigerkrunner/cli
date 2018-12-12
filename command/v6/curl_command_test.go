@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/gomega/gbytes"
 
 	"code.cloudfoundry.org/cli/command/commandfakes"
+	"code.cloudfoundry.org/cli/command/translatableerror"
 	. "code.cloudfoundry.org/cli/command/v6"
 	"code.cloudfoundry.org/cli/command/v6/v6fakes"
 	"code.cloudfoundry.org/cli/util/ui"
@@ -36,34 +37,59 @@ var _ = Describe("CurlCommand", func() {
 		executeErr = cmd.Execute(nil)
 	})
 
-	When("The APIPath is valid", func() {
-		var expectedJSONResponse, expectedRequestHeaders, expectedResponseHeaders string
+	When("the refactor is incomplete", func() {
+		When("CF_CLI_EXPERIMENTAL is false", func() {
+			BeforeEach(func() {
+				fakeConfig.ExperimentalReturns(false)
+			})
 
-		BeforeEach(func() {
-			expectedJSONResponse = `{
+			It("returns an UnrefactoredCommandError", func() {
+				Expect(executeErr).To(MatchError(translatableerror.UnrefactoredCommandError{}))
+			})
+		})
+
+		When("CF_CLI_EXPERIMENTAL is true", func() {
+			BeforeEach(func() {
+				fakeConfig.ExperimentalReturns(true)
+			})
+
+			When("The APIPath is valid", func() {
+				var expectedJSONResponse, expectedRequestHeaders, expectedResponseHeaders string
+
+				BeforeEach(func() {
+					expectedJSONResponse = `{
 					"key1": "value1",
 					"key2": "value2"
 			}`
-			expectedRequestHeaders = "Request: test\n X-Foo: foo"
-			expectedResponseHeaders = "Response: test\n X-Bar: bar"
+					expectedRequestHeaders = "Request: test\n X-Foo: foo"
+					expectedResponseHeaders = "Response: test\n X-Bar: bar"
 
-			fakeActor.MakeRequestReturns(expectedRequestHeaders, expectedResponseHeaders, expectedJSONResponse)
-		})
+					fakeActor.MakeRequestReturns(expectedRequestHeaders, expectedResponseHeaders, expectedJSONResponse)
+				})
+				When("the -v flag is not set", func() {
+					BeforeEach(func() {
+						fakeConfig.VerboseReturns(false, nil)
+					})
 
-		It("makes a request and displays the JSON response", func() {
-			Expect(executeErr).ToNot(HaveOccurred())
-			Expect(testUI.Out).ToNot(Say(expectedRequestHeaders))
-			Expect(testUI.Out).ToNot(Say(expectedResponseHeaders))
-			Expect(testUI.Out).To(Say(expectedJSONResponse))
-		})
+					It("makes a request and displays the JSON response", func() {
+						Expect(executeErr).ToNot(HaveOccurred())
+						Expect(testUI.Out).ToNot(Say(expectedRequestHeaders))
+						Expect(testUI.Out).ToNot(Say(expectedResponseHeaders))
+						Expect(testUI.Out).To(Say(expectedJSONResponse))
+					})
+				})
 
-		When("-v flag is set", func() {
-			It("displays the request and response headers", func() {
-				Expect(executeErr).ToNot(HaveOccurred())
-				Expect(testUI.Out).To(Say(expectedRequestHeaders))
-				Expect(testUI.Out).To(Say(expectedResponseHeaders))
-				Expect(testUI.Out).To(Say(expectedJSONResponse))
-
+				When("-v flag is set", func() {
+					BeforeEach(func() {
+						fakeConfig.VerboseReturns(true, nil)
+					})
+					It("displays the request and response headers", func() {
+						Expect(executeErr).ToNot(HaveOccurred())
+						Expect(testUI.Out).To(Say(expectedRequestHeaders))
+						Expect(testUI.Out).To(Say(expectedResponseHeaders))
+						Expect(testUI.Out).To(Say(expectedJSONResponse))
+					})
+				})
 			})
 		})
 	})

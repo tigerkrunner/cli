@@ -1,4 +1,4 @@
-package isolated
+package experimental
 
 import (
 	"fmt"
@@ -120,7 +120,7 @@ var _ = Describe("curl command", func() {
 	})
 
 	Describe("User Agent", func() {
-		It("sets the User-Agent Header to contain the CLI version", func() {
+		FIt("sets the User-Agent Header to contain the CLI version", func() {
 			getVersionNumber := func() string {
 				versionSession := helpers.CF("version")
 				Eventually(versionSession).Should(Exit(0))

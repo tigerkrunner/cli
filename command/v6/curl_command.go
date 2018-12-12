@@ -25,7 +25,11 @@ type CurlCommand struct {
 	Actor                 CurlActor
 }
 
-func (CurlCommand) Setup(config command.Config, ui command.UI) error {
+func (cmd *CurlCommand) Setup(config command.Config, ui command.UI) error {
+	cmd.UI = ui
+	cmd.Config = config
+
+	// cmd.Actor = sharedaction.NewActor(config)
 	return nil
 }
 
@@ -35,8 +39,10 @@ func (cmd CurlCommand) Execute(args []string) error {
 	}
 
 	requestHeaders, responseHeaders, responseJSON := cmd.Actor.MakeRequest(cmd.RequiredArgs.Path)
-	cmd.UI.DisplayText(requestHeaders)
-	cmd.UI.DisplayText(responseHeaders)
+	if verbose, _ := cmd.Config.Verbose(); verbose {
+		cmd.UI.DisplayText(requestHeaders)
+		cmd.UI.DisplayText(responseHeaders)
+	}
 	cmd.UI.DisplayText(responseJSON)
 	return nil
 }
