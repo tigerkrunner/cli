@@ -33,7 +33,7 @@ func GetUsers() []User {
 	nextURL := "/v2/users?results-per-page=50"
 
 	for {
-		session := NonExperimentalCurl(nextURL)
+		session := CF("curl", nextURL)
 		Eventually(session).Should(Exit(0))
 
 		err := json.Unmarshal(session.Out.Contents(), &userPagesResponse)

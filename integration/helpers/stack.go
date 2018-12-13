@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 
 	"fmt"
-	"strings"
-
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gexec"
+	"strings"
 )
 
 type ccStacks struct {
@@ -20,7 +19,7 @@ type ccStacks struct {
 }
 
 func FetchStacks() []string {
-	session := NonExperimentalCurl("/v2/stacks")
+	session := CF("curl", "/v2/stacks")
 
 	Eventually(session).Should(Exit(0))
 
@@ -46,7 +45,7 @@ func CreateStack(names ...string) string {
 		`{"name":"%s","description":"CF CLI integration test stack, please delete"}`,
 		name,
 	)
-	session := NonExperimentalCurl("-v", "-X", "POST", "/v2/stacks", "-d", requestBody)
+	session := CF("curl", "-v", "-X", "POST", "/v2/stacks", "-d", requestBody)
 
 	Eventually(session).Should(Say("201 Created"))
 	Eventually(session).Should(Exit(0))
@@ -59,7 +58,7 @@ func DeleteStack(name string) {
 	Eventually(session).Should(Exit(0))
 	guid := strings.TrimSpace(string(session.Out.Contents()))
 
-	session = NonExperimentalCurl("-v", "-X", "DELETE", "/v2/stacks/"+guid)
+	session = CF("curl", "-v", "-X", "DELETE", "/v2/stacks/"+guid)
 
 	Eventually(session).Should(Say("204 No Content"))
 	Eventually(session).Should(Exit(0))
