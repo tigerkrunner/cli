@@ -19,12 +19,12 @@ const MaxTestPort = 1034
 func FindOrCreateTCPRouterGroup(node int) string {
 	routerGroupName := fmt.Sprintf("INTEGRATION-TCP-NODE-%d", node)
 
-	session := NonExperimentalCurl(fmt.Sprintf("/routing/v1/router_groups?name=%s", routerGroupName))
+	session := CF("curl", fmt.Sprintf("/routing/v1/router_groups?name=%s", routerGroupName))
 	Eventually(session).Should(Exit(0))
 	doesNotExist := regexp.MustCompile("ResourceNotFoundError")
 	if doesNotExist.Match(session.Out.Contents()) {
 		jsonBody := fmt.Sprintf(`{"name": "%s", "type": "tcp", "reservable_ports": "%d-%d"}`, routerGroupName, MinTestPort, MaxTestPort)
-		session := NonExperimentalCurl("-d", jsonBody, "-X", "POST", "/routing/v1/router_groups")
+		session := CF("curl", "-d", jsonBody, "-X", "POST", "/routing/v1/router_groups")
 		Eventually(session).Should(Say(`"name":\s*"%s"`, routerGroupName))
 		Eventually(session).Should(Say(`"type":\s*"tcp"`))
 		Eventually(session).Should(Exit(0))

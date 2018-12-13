@@ -9,7 +9,7 @@ import (
 )
 
 func GetIsolationSegmentGUID(name string) string {
-	session := NonExperimentalCurl(fmt.Sprintf("/v3/isolation_segments?names=%s", name))
+	session := CF("curl", fmt.Sprintf("/v3/isolation_segments?names=%s", name))
 	bytes := session.Wait("15s").Out.Contents()
 	return getGUID(bytes)
 }

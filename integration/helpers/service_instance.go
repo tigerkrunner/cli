@@ -19,7 +19,7 @@ type ServiceInstanceGUID struct {
 
 // ManagedServiceInstanceGUID returns the GUID for a managed service instance.
 func ManagedServiceInstanceGUID(managedServiceInstanceName string) string {
-	session := NonExperimentalCurl(fmt.Sprintf("/v2/service_instances?q=name:%s", managedServiceInstanceName))
+	session := CF("curl", fmt.Sprintf("/v2/service_instances?q=name:%s", managedServiceInstanceName))
 	Eventually(session).Should(Exit(0))
 
 	rawJSON := strings.TrimSpace(string(session.Out.Contents()))
@@ -34,7 +34,7 @@ func ManagedServiceInstanceGUID(managedServiceInstanceName string) string {
 
 // UserProvidedServiceInstanceGUID returns the GUID for a user provided service instance.
 func UserProvidedServiceInstanceGUID(userProvidedServiceInstanceName string) string {
-	session := NonExperimentalCurl(fmt.Sprintf("/v2/user_provided_service_instances?q=name:%s", userProvidedServiceInstanceName))
+	session := CF("curl", fmt.Sprintf("/v2/user_provided_service_instances?q=name:%s", userProvidedServiceInstanceName))
 	Eventually(session).Should(Exit(0))
 
 	rawJSON := strings.TrimSpace(string(session.Out.Contents()))
