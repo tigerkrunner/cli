@@ -12,19 +12,23 @@ import (
 	"code.cloudfoundry.org/cli/util/ui"
 )
 
-var _ = Describe("CurlCommand", func() {
+var _ = FDescribe("CurlCommand", func() {
 	var (
 		cmd        CurlCommand
 		testUI     *ui.UI
 		fakeConfig *commandfakes.FakeConfig
 		fakeActor  *v6fakes.FakeCurlActor
 		executeErr error
+		extraArgs  []string
+		outBuffer  *Buffer
 	)
 
 	BeforeEach(func() {
-		testUI = ui.NewTestUI(NewBuffer(), NewBuffer(), NewBuffer())
+		outBuffer = NewBuffer()
+		testUI = ui.NewTestUI(NewBuffer(), outBuffer, NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeActor = new(v6fakes.FakeCurlActor)
+		extraArgs = nil
 
 		cmd = CurlCommand{
 			Config: fakeConfig,
@@ -34,11 +38,11 @@ var _ = Describe("CurlCommand", func() {
 	})
 
 	JustBeforeEach(func() {
-		executeErr = cmd.Execute(nil)
+		executeErr = cmd.Execute(extraArgs)
 	})
 
 	When("the refactor is incomplete", func() {
-		When("CF_CLI_EXPERIMENTAL is false", func() {
+		When("CF_CLI_CURL_EXPERIMENTAL is false", func() {
 			BeforeEach(func() {
 				fakeConfig.ExperimentalReturns(false)
 			})
@@ -48,9 +52,19 @@ var _ = Describe("CurlCommand", func() {
 			})
 		})
 
-		When("CF_CLI_EXPERIMENTAL is true", func() {
+		When("CF_CLI_CURL_EXPERIMENTAL is true", func() {
 			BeforeEach(func() {
-				fakeConfig.ExperimentalReturns(true)
+				fakeConfig.CurlExperimentalReturns(true)
+			})
+
+			When("too many positional args are passed", func() {
+				BeforeEach(func() {
+					extraArgs = []string{"foo"}
+				})
+
+				It("returns an error and displays", func() {
+					Expect(executeErr).To(MatchError(translatableerror.TooManyArgumentsError{ExtraArgument: extraArgs[0]}))
+				})
 			})
 
 			When("The APIPath is valid", func() {
@@ -66,7 +80,13 @@ var _ = Describe("CurlCommand", func() {
 
 					fakeActor.MakeRequestReturns(expectedRequestHeaders, expectedResponseHeaders, expectedJSONResponse)
 				})
-				When("the -v flag is not set", func() {
+
+				It("should make the request and display the JSON response", func() {
+					Expect(executeErr).ToNot(HaveOccurred())
+					Expect(outBuffer.Contents()).To(MatchJSON(expectedJSONResponse))
+				})
+
+				XWhen("the -v flag is not set", func() {
 					BeforeEach(func() {
 						fakeConfig.VerboseReturns(false, nil)
 					})
@@ -79,7 +99,7 @@ var _ = Describe("CurlCommand", func() {
 					})
 				})
 
-				When("-v flag is set", func() {
+				XWhen("-v flag is set", func() {
 					BeforeEach(func() {
 						fakeConfig.VerboseReturns(true, nil)
 					})

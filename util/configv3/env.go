@@ -19,6 +19,7 @@ type EnvOverride struct {
 	CFStartupTimeout string
 	CFTrace          string
 	CFUsername       string
+	CurlExperimental string // TODO Remove once we are done with refactor of cf curl command
 	DockerPassword   string
 	Experimental     string
 	ForceTTY         string
@@ -40,6 +41,22 @@ func (config *Config) CFPassword() string {
 // CFUsername returns the value of the "CF_USERNAME" environment variable.
 func (config *Config) CFUsername() string {
 	return config.ENV.CFUsername
+}
+
+// TODO Remove once we are done with refactor of cf curl command
+// CurlExperimental returns whether or not to run the curl command in experimental mode. This
+// is based off of:
+//   1. The $CF_CLI_CURL_EXPERIMENTAL environment variable if set
+//   2. Defaults to false
+func (config *Config) CurlExperimental() bool {
+	if config.ENV.CurlExperimental != "" {
+		envVal, err := strconv.ParseBool(config.ENV.CurlExperimental)
+		if err == nil {
+			return envVal
+		}
+	}
+
+	return false
 }
 
 // DialTimeout returns the timeout to use when dialing. This is based off of:

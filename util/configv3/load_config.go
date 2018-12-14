@@ -88,6 +88,7 @@ func LoadConfig(flags ...FlagOverride) (*Config, error) {
 		CFStartupTimeout: os.Getenv("CF_STARTUP_TIMEOUT"),
 		CFTrace:          os.Getenv("CF_TRACE"),
 		CFUsername:       os.Getenv("CF_USERNAME"),
+		CurlExperimental: os.Getenv("CF_CLI_CURL_EXPERIMENTAL"), // TODO Remove once we finish refactor of CF CURL command
 		DockerPassword:   os.Getenv("CF_DOCKER_PASSWORD"),
 		Experimental:     os.Getenv("CF_CLI_EXPERIMENTAL"),
 		ForceTTY:         os.Getenv("FORCE_TTY"),

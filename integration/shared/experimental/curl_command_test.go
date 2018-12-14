@@ -15,7 +15,7 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("curl command", func() {
+var _ = FDescribe("curl command", func() {
 	var ExpectHelpText = func(session *Session) {
 		Eventually(session).Should(Say(`NAME:\n`))
 		Eventually(session).Should(Say(`curl - Executes a request to the targeted API endpoint\n`))
@@ -64,10 +64,12 @@ var _ = Describe("curl command", func() {
 		Eventually(session).Should(Say(`X-Vcap-Request-Id: .+`))
 	}
 
-	Describe("Help Text", func() {
+	var ExperimentalEnvVariables = map[string]string{"CF_CLI_CURL_EXPERIMENTAL": "true"}
+
+	FDescribe("Help Text", func() {
 		When("--help flag is set", func() {
 			It("Displays command usage to the output", func() {
-				session := helpers.CF("curl", "--help")
+				session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "--help")
 				ExpectHelpText(session)
 				Eventually(session).Should(Exit(0))
 			})
@@ -76,8 +78,8 @@ var _ = Describe("curl command", func() {
 
 	Describe("Incorrect Usage", func() {
 		When("no arguments are provided", func() {
-			It("fails and displays the help text", func() {
-				session := helpers.CF("curl")
+			FIt("fails and displays the help text", func() {
+				session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl")
 				Eventually(session.Err).Should(Say("Incorrect Usage: the required argument `PATH` was not provided"))
 				ExpectHelpText(session)
 				Eventually(session).Should(Exit(1))
@@ -85,9 +87,8 @@ var _ = Describe("curl command", func() {
 		})
 
 		When("unknown flag is specified", func() {
-			It("fails and displays the help text", func() {
-				session := helpers.CF("curl", "--test")
-				// TODO Legacy cf uses a weird quote around test. This test needs be fixed for refactored command
+			FIt("fails and displays the help text", func() {
+				session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "--test")
 				Eventually(session.Err).Should(Say("Incorrect Usage: unknown flag `test'"))
 				ExpectHelpText(session)
 				Eventually(session).Should(Exit(1))
@@ -95,11 +96,10 @@ var _ = Describe("curl command", func() {
 		})
 
 		When("more than one path is specified", func() {
-			It("fails and displays the help text", func() {
-				session := helpers.CF("curl", "/v2/apps", "/v2/apps")
+			FIt("fails and displays the help text", func() {
+				session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "/v2/apps", "/v2/info")
 				Eventually(session).Should(Say("FAILED\n"))
-				// TODO Legacy code uses Incorrect Usage.(dot) instead of Incorrect Usage: (colon). Fix this test after refactor
-				Eventually(session).Should(Say("Incorrect Usage. An argument is missing or not correctly enclosed."))
+				Eventually(session.Err).Should(Say("Incorrect Usage: unexpected argument \"%s\"", "/v2/info"))
 				ExpectHelpText(session)
 				Eventually(session).Should(Exit(1))
 			})
@@ -107,8 +107,8 @@ var _ = Describe("curl command", func() {
 	})
 
 	When("the user is not logged in", func() {
-		It("makes the request and receives an unauthenticated error", func() {
-			session := helpers.CF("curl", "/v2/apps")
+		FIt("makes the request and receives an unauthenticated error", func() {
+			session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "/v2/apps")
 			expectedJSON := `{
 				 "description": "Authentication error",
 				 "error_code": "CF-NotAuthenticated",
@@ -120,7 +120,7 @@ var _ = Describe("curl command", func() {
 	})
 
 	Describe("User Agent", func() {
-		FIt("sets the User-Agent Header to contain the CLI version", func() {
+		It("sets the User-Agent Header to contain the CLI version", func() {
 			getVersionNumber := func() string {
 				versionSession := helpers.CF("version")
 				Eventually(versionSession).Should(Exit(0))
