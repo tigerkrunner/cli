@@ -91,6 +91,16 @@ type FakeConfig struct {
 	colorEnabledReturnsOnCall map[int]struct {
 		result1 configv3.ColorSetting
 	}
+	CurlExperimentalStub        func() bool
+	curlExperimentalMutex       sync.RWMutex
+	curlExperimentalArgsForCall []struct {
+	}
+	curlExperimentalReturns struct {
+		result1 bool
+	}
+	curlExperimentalReturnsOnCall map[int]struct {
+		result1 bool
+	}
 	CurrentUserStub        func() (configv3.User, error)
 	currentUserMutex       sync.RWMutex
 	currentUserArgsForCall []struct {
@@ -951,6 +961,58 @@ func (fake *FakeConfig) ColorEnabledReturnsOnCall(i int, result1 configv3.ColorS
 	}
 	fake.colorEnabledReturnsOnCall[i] = struct {
 		result1 configv3.ColorSetting
+	}{result1}
+}
+
+func (fake *FakeConfig) CurlExperimental() bool {
+	fake.curlExperimentalMutex.Lock()
+	ret, specificReturn := fake.curlExperimentalReturnsOnCall[len(fake.curlExperimentalArgsForCall)]
+	fake.curlExperimentalArgsForCall = append(fake.curlExperimentalArgsForCall, struct {
+	}{})
+	fake.recordInvocation("CurlExperimental", []interface{}{})
+	fake.curlExperimentalMutex.Unlock()
+	if fake.CurlExperimentalStub != nil {
+		return fake.CurlExperimentalStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.curlExperimentalReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeConfig) CurlExperimentalCallCount() int {
+	fake.curlExperimentalMutex.RLock()
+	defer fake.curlExperimentalMutex.RUnlock()
+	return len(fake.curlExperimentalArgsForCall)
+}
+
+func (fake *FakeConfig) CurlExperimentalCalls(stub func() bool) {
+	fake.curlExperimentalMutex.Lock()
+	defer fake.curlExperimentalMutex.Unlock()
+	fake.CurlExperimentalStub = stub
+}
+
+func (fake *FakeConfig) CurlExperimentalReturns(result1 bool) {
+	fake.curlExperimentalMutex.Lock()
+	defer fake.curlExperimentalMutex.Unlock()
+	fake.CurlExperimentalStub = nil
+	fake.curlExperimentalReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeConfig) CurlExperimentalReturnsOnCall(i int, result1 bool) {
+	fake.curlExperimentalMutex.Lock()
+	defer fake.curlExperimentalMutex.Unlock()
+	fake.CurlExperimentalStub = nil
+	if fake.curlExperimentalReturnsOnCall == nil {
+		fake.curlExperimentalReturnsOnCall = make(map[int]struct {
+			result1 bool
+		})
+	}
+	fake.curlExperimentalReturnsOnCall[i] = struct {
+		result1 bool
 	}{result1}
 }
 
@@ -3197,6 +3259,8 @@ func (fake *FakeConfig) Invocations() map[string][][]interface{} {
 	defer fake.cFUsernameMutex.RUnlock()
 	fake.colorEnabledMutex.RLock()
 	defer fake.colorEnabledMutex.RUnlock()
+	fake.curlExperimentalMutex.RLock()
+	defer fake.curlExperimentalMutex.RUnlock()
 	fake.currentUserMutex.RLock()
 	defer fake.currentUserMutex.RUnlock()
 	fake.currentUserNameMutex.RLock()

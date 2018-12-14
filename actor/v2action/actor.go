@@ -22,3 +22,7 @@ func NewActor(ccClient CloudControllerClient, uaaClient UAAClient, config Config
 		domainCache:           map[string]Domain{},
 	}
 }
+
+func (actor *Actor) MakeRequest(path string) (string, string, string) {
+	return "", "", ""
+}

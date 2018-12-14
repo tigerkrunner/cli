@@ -1,8 +1,11 @@
 package v6
 
 import (
+	"code.cloudfoundry.org/cli/actor/v2action"
 	"code.cloudfoundry.org/cli/command"
 	"code.cloudfoundry.org/cli/command/flag"
+	"code.cloudfoundry.org/cli/command/translatableerror"
+	"code.cloudfoundry.org/cli/command/v6/shared"
 )
 
 //go:generate counterfeiter . CurlActor
@@ -28,11 +31,26 @@ func (cmd *CurlCommand) Setup(config command.Config, ui command.UI) error {
 	cmd.UI = ui
 	cmd.Config = config
 
-	// cmd.Actor = sharedaction.NewActor(config)
+	ccClient, uaaClient, err := shared.NewClients(config, ui, true)
+	if err != nil {
+		return err
+	}
+	// // cmd.Actor = sharedaction.NewActor(config)
+	cmd.Actor = v2action.NewActor(ccClient, uaaClient, config)
 	return nil
 }
 
 func (cmd CurlCommand) Execute(args []string) error {
+	if !cmd.Config.CurlExperimental() {
+		return translatableerror.UnrefactoredCommandError{}
+	}
+
+	if len(args) > 0 {
+		return translatableerror.TooManyArgumentsError{
+			ExtraArgument: args[0],
+		}
+	}
+
 	requestHeaders, responseHeaders, responseJSON := cmd.Actor.MakeRequest(cmd.RequiredArgs.Path)
 	if verbose, _ := cmd.Config.Verbose(); verbose {
 		cmd.UI.DisplayText(requestHeaders)
