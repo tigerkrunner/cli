@@ -137,6 +137,18 @@ var _ = Describe("curl command", func() {
 		Expect(ui.Outputs()).ToNot(ContainSubstrings([]string{"FAILED"}))
 	})
 
+	It("fails on HTTP errors given --fail", func() {
+		runCurlWithInputs([]string{"--fail", "/foo"})
+
+		Expect(curlRepo.FailOnHTTPError).To(Equal(true))
+	})
+
+	It("does not fail on HTTP erros if --fail is false", func() {
+		runCurlWithInputs([]string{"--fail", "false", "/foo"})
+
+		Expect(curlRepo.FailOnHTTPError).To(Equal(false))
+	})
+
 	It("sends headers given -H", func() {
 		runCurlWithInputs([]string{"-H", "Content-Type:cat", "/foo"})
 
