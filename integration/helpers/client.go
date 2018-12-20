@@ -6,6 +6,7 @@ import (
 	"code.cloudfoundry.org/cli/api/uaa"
 	uaaWrapper "code.cloudfoundry.org/cli/api/uaa/wrapper"
 	"code.cloudfoundry.org/cli/command/translatableerror"
+	"code.cloudfoundry.org/cli/command/v6/shared"
 	"code.cloudfoundry.org/cli/util/configv3"
 )
 
@@ -22,8 +23,7 @@ func CreateCCV2Client() (*ccv2.Client, error) {
 	ccWrappers = append(ccWrappers, ccWrapper.NewRetryRequest(config.RequestRetryCount()))
 
 	ccClient := ccv2.NewClient(ccv2.Config{
-		AppName:            config.BinaryName(),
-		AppVersion:         config.BinaryVersion(),
+		UserAgent:          shared.BuildUserAgent(config),
 		JobPollingTimeout:  config.OverallPollingTimeout(),
 		JobPollingInterval: config.PollingInterval(),
 		Wrappers:           ccWrappers,

@@ -31,8 +31,7 @@ func NewClients(config command.Config, ui command.UI, targetCF bool) (*ccv2.Clie
 	ccWrappers = append(ccWrappers, ccWrapper.NewRetryRequest(config.RequestRetryCount()))
 
 	ccClient := ccv2.NewClient(ccv2.Config{
-		AppName:            config.BinaryName(),
-		AppVersion:         config.BinaryVersion(),
+		UserAgent:          BuildUserAgent(config),
 		JobPollingTimeout:  config.OverallPollingTimeout(),
 		JobPollingInterval: config.PollingInterval(),
 		Wrappers:           ccWrappers,

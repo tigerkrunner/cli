@@ -86,8 +86,6 @@
 package ccv2
 
 import (
-	"fmt"
-	"runtime"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
@@ -120,17 +118,14 @@ type Client struct {
 
 // Config allows the Client to be configured
 type Config struct {
-	// AppName is the name of the application/process using the client.
-	AppName string
-
-	// AppVersion is the version of the application/process using the client.
-	AppVersion string
-
 	// JobPollingTimeout is the maximum amount of time a job polls for.
 	JobPollingTimeout time.Duration
 
 	// JobPollingInterval is the wait time between job polls.
 	JobPollingInterval time.Duration
+
+	// UserAgent is the value for the User-Agent HTTP header.
+	UserAgent string
 
 	// Wrappers that apply to the client connection.
 	Wrappers []ConnectionWrapper
@@ -138,9 +133,8 @@ type Config struct {
 
 // NewClient returns a new Cloud Controller Client.
 func NewClient(config Config) *Client {
-	userAgent := fmt.Sprintf("%s/%s (%s; %s %s)", config.AppName, config.AppVersion, runtime.Version(), runtime.GOARCH, runtime.GOOS)
 	return &Client{
-		userAgent:          userAgent,
+		userAgent:          config.UserAgent,
 		jobPollingInterval: config.JobPollingInterval,
 		jobPollingTimeout:  config.JobPollingTimeout,
 		wrappers:           append([]ConnectionWrapper{newErrorWrapper()}, config.Wrappers...),

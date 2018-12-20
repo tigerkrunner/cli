@@ -63,9 +63,7 @@ var _ = Describe("Target", func() {
 				fakeWrapper2.WrapReturns(fakeWrapper2)
 
 				client = NewClient(Config{
-					AppName:    "CF CLI API Target Test",
-					AppVersion: "Unknown",
-					Wrappers:   []ConnectionWrapper{fakeWrapper1, fakeWrapper2},
+					Wrappers: []ConnectionWrapper{fakeWrapper1, fakeWrapper2},
 				})
 			})
 
@@ -84,7 +82,7 @@ var _ = Describe("Target", func() {
 
 		When("passed a valid API URL", func() {
 			BeforeEach(func() {
-				client = NewClient(Config{AppName: "CF CLI API Target Test", AppVersion: "Unknown"})
+				client = NewClient(Config{})
 			})
 
 			When("the api has unverified SSL", func() {

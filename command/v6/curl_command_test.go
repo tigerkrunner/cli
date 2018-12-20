@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"runtime"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,12 +25,14 @@ var _ = FDescribe("CurlCommand", func() {
 		fakeConfig *commandfakes.FakeConfig
 		fakeActor  *v6fakes.FakeCurlActor
 		extraArgs  []string
+		outBuffer  *Buffer
 
 		executeErr error
 	)
 
 	BeforeEach(func() {
-		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
+		outBuffer = NewBuffer()
+		testUI = ui.NewTestUI(nil, outBuffer, NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeActor = new(v6fakes.FakeCurlActor)
 		extraArgs = nil
@@ -75,14 +78,11 @@ var _ = FDescribe("CurlCommand", func() {
 					resp := &http.Response{
 						Body:       body,
 						Header:     h,
-						Status:     "200 OK",
 						StatusCode: 200,
-						Proto:      "1.1",
 					}
 					fakeActor.DoReturns(resp, nil)
 				})
 
-				// TODO: refactor this so that it makes sense for the When, or move it out.
 				It("makes a GET request to the provided endpoint on the targeted API", func() {
 					Expect(executeErr).ToNot(HaveOccurred())
 					Expect(fakeActor.DoCallCount()).To(Equal(1))
@@ -95,24 +95,53 @@ var _ = FDescribe("CurlCommand", func() {
 
 				It("prints the response body", func() {
 					Expect(executeErr).ToNot(HaveOccurred())
-					Expect(testUI.Out).To(Say("my fancy response"))
+					Expect(string(outBuffer.Contents())).To(Equal("my fancy response"))
+				})
+
+				When("the user is logged in", func() {
+					BeforeEach(func() {
+						fakeConfig.AccessTokenReturns("look a token")
+					})
+
+					It("includes the user's token in the authorization header", func() {
+						Expect(executeErr).ToNot(HaveOccurred())
+						req := fakeActor.DoArgsForCall(0)
+						authHeader, ok := req.Header["Authorization"]
+						Expect(ok).To(BeTrue())
+						Expect(authHeader).To(ConsistOf("bearer look a token"))
+					})
+
+					When("verbose logging is turned on", func() {
+						BeforeEach(func() {
+							fakeConfig.VerboseReturns(true, nil)
+						})
+
+						It("hides the authorization token", func() {
+							Expect(executeErr).ToNot(HaveOccurred())
+							Expect(testUI.Out).To(Say(`Authorization: \[PRIVATE DATA HIDDEN\]`))
+							Expect(testUI.Out).NotTo(Say("Authorization: bearer look a token"))
+						})
+					})
 				})
 
 				When("verbose logging is turned on", func() {
 					BeforeEach(func() {
 						fakeConfig.VerboseReturns(true, nil)
+						fakeConfig.BinaryNameReturns("foo")
+						fakeConfig.BinaryVersionReturns("bar")
 					})
 
-					It("prints the request", func() {
+					It("prints the request headers", func() {
 						Expect(testUI.Out).To(Say(`REQUEST:\s+\[\d{4}-\d{1,2}-\d{1,2}T.*\]`))
 						Expect(testUI.Out).To(Say("GET /some/api/path HTTP/1.1"))
 						Expect(testUI.Out).To(Say("Host: my.fake.api"))
+						Expect(testUI.Out).To(Say(`User-Agent: foo/bar \(%s; %s %s\)`, runtime.Version(), runtime.GOARCH, runtime.GOOS))
 					})
 
 					It("prints the response headers", func() {
 						Expect(testUI.Out).To(Say(`RESPONSE:\s+\[\d{4}-\d{1,2}-\d{1,2}T.*\]`))
-						Expect(testUI.Out).To(Say("HTTP/1.1 200 OK"))
-						Expect(testUI.Out).To(Say("LOL: WUT"))
+						Expect(testUI.Out).To(Say("HTTP/0.0 200 OK"))
+						Expect(testUI.Out).To(Say("Lol: WUT"))
 					})
 				})
 			})

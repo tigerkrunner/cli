@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"code.cloudfoundry.org/cli/integration/helpers"
@@ -66,7 +67,7 @@ var _ = FDescribe("curl command", func() {
 
 	var ExperimentalEnvVariables = map[string]string{"CF_CLI_CURL_EXPERIMENTAL": "true"}
 
-	FDescribe("Help Text", func() {
+	Describe("Help Text", func() {
 		When("--help flag is set", func() {
 			It("Displays command usage to the output", func() {
 				session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "--help")
@@ -78,7 +79,7 @@ var _ = FDescribe("curl command", func() {
 
 	Describe("Incorrect Usage", func() {
 		When("no arguments are provided", func() {
-			FIt("fails and displays the help text", func() {
+			It("fails and displays the help text", func() {
 				session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl")
 				Eventually(session.Err).Should(Say("Incorrect Usage: the required argument `PATH` was not provided"))
 				ExpectHelpText(session)
@@ -87,7 +88,7 @@ var _ = FDescribe("curl command", func() {
 		})
 
 		When("unknown flag is specified", func() {
-			FIt("fails and displays the help text", func() {
+			It("fails and displays the help text", func() {
 				session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "--test")
 				Eventually(session.Err).Should(Say("Incorrect Usage: unknown flag `test'"))
 				ExpectHelpText(session)
@@ -96,7 +97,7 @@ var _ = FDescribe("curl command", func() {
 		})
 
 		When("more than one path is specified", func() {
-			FIt("fails and displays the help text", func() {
+			It("fails and displays the help text", func() {
 				session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "/v2/apps", "/v2/info")
 				Eventually(session).Should(Say("FAILED\n"))
 				Eventually(session.Err).Should(Say("Incorrect Usage: unexpected argument \"%s\"", "/v2/info"))
@@ -107,7 +108,7 @@ var _ = FDescribe("curl command", func() {
 	})
 
 	When("the user is not logged in", func() {
-		FIt("makes the request and receives an unauthenticated error", func() {
+		It("makes the request and receives an unauthenticated error", func() {
 			session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "/v2/apps")
 			expectedJSON := `{
 				 "description": "Authentication error",
@@ -128,10 +129,10 @@ var _ = FDescribe("curl command", func() {
 				version := versionPattern.FindStringSubmatch(string(versionSession.Out.Contents()))
 				return regexp.QuoteMeta(version[1])
 			}
-			session := helpers.CF("curl", "/v2/info", "-v")
+			session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "/v2/info", "-v")
 			Eventually(session).Should(Exit(0))
-
-			Expect(session).To(Say(`User-Agent: go-cli %s`, getVersionNumber()))
+			userAgent := fmt.Sprintf(`cf/%s \(%s; %s %s\)`, getVersionNumber(), runtime.Version(), runtime.GOARCH, runtime.GOOS)
+			Expect(session).To(Say(`User-Agent: %s`, userAgent))
 		})
 	})
 
@@ -162,7 +163,7 @@ var _ = FDescribe("curl command", func() {
 
 			When("the path has multiple initial slashes", func() {
 				It("changes the path to use only one slash", func() {
-					session := helpers.CF("curl", "////v2/apps", "-v")
+					session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "////v2/apps", "-v")
 					Eventually(session).Should(Exit(0))
 
 					Eventually(session).Should(Say(`GET /v2/apps HTTP/1.1`))
@@ -171,7 +172,7 @@ var _ = FDescribe("curl command", func() {
 
 			When("the path has no initial slashes", func() {
 				It("prepends a slash to the path", func() {
-					session := helpers.CF("curl", "v2/apps", "-v")
+					session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "v2/apps", "-v")
 					Eventually(session).Should(Exit(0))
 
 					Eventually(session).Should(Say(`GET /v2/apps HTTP/1.1`))
@@ -180,13 +181,13 @@ var _ = FDescribe("curl command", func() {
 
 			When("no flag is set", func() {
 				It("makes the request and displays the json response", func() {
-					session := helpers.CF("curl", "/v2/apps")
+					session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "/v2/apps")
 					Eventually(session).Should(Exit(0))
 					Expect(session.Out.Contents()).To(MatchJSON(expectedJSON))
 				})
 			})
 
-			When("-i flag is set", func() {
+			XWhen("-i flag is set", func() {
 				It("displays the response headers", func() {
 					session := helpers.CF("curl", "/v2/apps", "-i")
 					Eventually(session).Should(Exit(0))
@@ -202,7 +203,7 @@ var _ = FDescribe("curl command", func() {
 
 			When("-v flag is set", func() {
 				It("displays the request headers and response headers", func() {
-					session := helpers.CF("curl", "/v2/apps", "-v")
+					session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "/v2/apps", "-v")
 					Eventually(session).Should(Exit(0))
 
 					ExpectRequestHeaders(session)
@@ -216,7 +217,7 @@ var _ = FDescribe("curl command", func() {
 				})
 			})
 
-			When("-H is passed with a custom header", func() {
+			XWhen("-H is passed with a custom header", func() {
 				When("the custom header is valid", func() {
 					It("add the custom header to the request", func() {
 						session := helpers.CF("curl", "/v2/apps", "-H", "X-Foo: bar", "-v")
@@ -309,7 +310,7 @@ var _ = FDescribe("curl command", func() {
 				})
 			})
 
-			When("-d is passed with a request body", func() {
+			XWhen("-d is passed with a request body", func() {
 				When("the request body is passed as a string", func() {
 					It("sets the method to POST and sends the body", func() {
 						orgGUID := helpers.GetOrgGUID(orgName)
@@ -371,7 +372,7 @@ var _ = FDescribe("curl command", func() {
 				})
 			})
 
-			When("-X is passed with the HTTP method", func() {
+			XWhen("-X is passed with the HTTP method", func() {
 				var spaceGUID, spaceName string
 
 				BeforeEach(func() {
@@ -389,7 +390,7 @@ var _ = FDescribe("curl command", func() {
 				})
 			})
 
-			When("--output is passed with a file name", func() {
+			XWhen("--output is passed with a file name", func() {
 				It("writes the response body to the file but the other output to stdout", func() {
 					outFile, err := ioutil.TempFile("", "output*.json")
 					Expect(err).ToNot(HaveOccurred())
@@ -430,7 +431,7 @@ var _ = FDescribe("curl command", func() {
 				})
 			})
 
-			Describe("Flag combinations", func() {
+			XDescribe("Flag combinations", func() {
 				When("-i and -v flags are set", func() {
 					It("prints both the request and response headers", func() {
 						session := helpers.CF("curl", "/v2/apps", "-v", "-i")
@@ -493,7 +494,7 @@ var _ = FDescribe("curl command", func() {
 				})
 			})
 
-			When("the auth token is invalid", func() {
+			XWhen("the auth token is invalid", func() {
 				var spaceGUID, spaceName string
 
 				BeforeEach(func() {
@@ -521,7 +522,7 @@ var _ = FDescribe("curl command", func() {
 				 "error_code": "CF-NotFound",
 				 "code": 10000
 				}`
-				session := helpers.CF("curl", "/some-random-path")
+				session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "/some-random-path")
 				Eventually(session).Should(Exit(0))
 				Expect(session.Out.Contents()).To(MatchJSON(expectedJSON))
 			})

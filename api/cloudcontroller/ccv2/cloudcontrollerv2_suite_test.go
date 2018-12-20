@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"runtime"
 	"strings"
 
 	. "code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
@@ -47,8 +48,7 @@ func NewClientWithCustomAPIVersion(apiVersion string, passed ...Config) *Client 
 	} else {
 		config = Config{}
 	}
-	config.AppName = "CF CLI API V2 Test"
-	config.AppVersion = "Unknown"
+	config.UserAgent = fmt.Sprintf("CF CLI API V2 Test/Unknown (%s; %s %s)", runtime.Version(), runtime.GOARCH, runtime.GOOS)
 
 	client := NewClient(config)
 	warnings, err := client.TargetCF(TargetSettings{
