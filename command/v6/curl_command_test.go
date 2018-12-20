@@ -1,6 +1,11 @@
 package v6_test
 
 import (
+	"bytes"
+	"errors"
+	"io/ioutil"
+	"net/http"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
@@ -18,23 +23,25 @@ var _ = FDescribe("CurlCommand", func() {
 		testUI     *ui.UI
 		fakeConfig *commandfakes.FakeConfig
 		fakeActor  *v6fakes.FakeCurlActor
-		executeErr error
 		extraArgs  []string
-		outBuffer  *Buffer
+
+		executeErr error
 	)
 
 	BeforeEach(func() {
-		outBuffer = NewBuffer()
-		testUI = ui.NewTestUI(NewBuffer(), outBuffer, NewBuffer())
+		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeActor = new(v6fakes.FakeCurlActor)
 		extraArgs = nil
 
 		cmd = CurlCommand{
 			Config: fakeConfig,
-			UI:     testUI,
 			Actor:  fakeActor,
+			UI:     testUI,
 		}
+		cmd.RequiredArgs.Path = "/some/api/path"
+
+		fakeConfig.TargetReturns("https://my.fake.api")
 	})
 
 	JustBeforeEach(func() {
@@ -57,61 +64,78 @@ var _ = FDescribe("CurlCommand", func() {
 				fakeConfig.CurlExperimentalReturns(true)
 			})
 
+			When("the server returns a response", func() {
+				BeforeEach(func() {
+					buf := bytes.NewBufferString("my fancy response")
+					body := ioutil.NopCloser(buf)
+
+					h := http.Header{}
+					h.Add("Lol", "WUT")
+
+					resp := &http.Response{
+						Body:       body,
+						Header:     h,
+						Status:     "200 OK",
+						StatusCode: 200,
+						Proto:      "1.1",
+					}
+					fakeActor.DoReturns(resp, nil)
+				})
+
+				// TODO: refactor this so that it makes sense for the When, or move it out.
+				It("makes a GET request to the provided endpoint on the targeted API", func() {
+					Expect(executeErr).ToNot(HaveOccurred())
+					Expect(fakeActor.DoCallCount()).To(Equal(1))
+
+					req := fakeActor.DoArgsForCall(0)
+					Expect(req.Method).To(Equal(http.MethodGet))
+					Expect(req.URL.Path).To(Equal("/some/api/path"))
+					Expect(req.URL.Host).To(Equal("my.fake.api"))
+				})
+
+				It("prints the response body", func() {
+					Expect(executeErr).ToNot(HaveOccurred())
+					Expect(testUI.Out).To(Say("my fancy response"))
+				})
+
+				When("verbose logging is turned on", func() {
+					BeforeEach(func() {
+						fakeConfig.VerboseReturns(true, nil)
+					})
+
+					It("prints the request", func() {
+						Expect(testUI.Out).To(Say(`REQUEST:\s+\[\d{4}-\d{1,2}-\d{1,2}T.*\]`))
+						Expect(testUI.Out).To(Say("GET /some/api/path HTTP/1.1"))
+						Expect(testUI.Out).To(Say("Host: my.fake.api"))
+					})
+
+					It("prints the response headers", func() {
+						Expect(testUI.Out).To(Say(`RESPONSE:\s+\[\d{4}-\d{1,2}-\d{1,2}T.*\]`))
+						Expect(testUI.Out).To(Say("HTTP/1.1 200 OK"))
+						Expect(testUI.Out).To(Say("LOL: WUT"))
+					})
+				})
+			})
+
+			When("making the request fails", func() {
+				BeforeEach(func() {
+					fakeActor.DoReturns(nil, errors.New("whoops"))
+				})
+
+				It("returns the error", func() {
+					Expect(executeErr).To(MatchError("whoops"))
+				})
+			})
+
 			When("too many positional args are passed", func() {
 				BeforeEach(func() {
 					extraArgs = []string{"foo"}
 				})
 
-				It("returns an error and displays", func() {
+				It("returns an error", func() {
 					Expect(executeErr).To(MatchError(translatableerror.TooManyArgumentsError{ExtraArgument: extraArgs[0]}))
-				})
-			})
-
-			When("The APIPath is valid", func() {
-				var expectedJSONResponse, expectedRequestHeaders, expectedResponseHeaders string
-
-				BeforeEach(func() {
-					expectedJSONResponse = `{
-					"key1": "value1",
-					"key2": "value2"
-			}`
-					expectedRequestHeaders = "Request: test\n X-Foo: foo"
-					expectedResponseHeaders = "Response: test\n X-Bar: bar"
-
-					fakeActor.MakeRequestReturns(expectedRequestHeaders, expectedResponseHeaders, expectedJSONResponse)
-				})
-
-				It("should make the request and display the JSON response", func() {
-					Expect(executeErr).ToNot(HaveOccurred())
-					Expect(outBuffer.Contents()).To(MatchJSON(expectedJSONResponse))
-				})
-
-				XWhen("the -v flag is not set", func() {
-					BeforeEach(func() {
-						fakeConfig.VerboseReturns(false, nil)
-					})
-
-					It("makes a request and displays the JSON response", func() {
-						Expect(executeErr).ToNot(HaveOccurred())
-						Expect(testUI.Out).ToNot(Say(expectedRequestHeaders))
-						Expect(testUI.Out).ToNot(Say(expectedResponseHeaders))
-						Expect(testUI.Out).To(Say(expectedJSONResponse))
-					})
-				})
-
-				XWhen("-v flag is set", func() {
-					BeforeEach(func() {
-						fakeConfig.VerboseReturns(true, nil)
-					})
-					It("displays the request and response headers", func() {
-						Expect(executeErr).ToNot(HaveOccurred())
-						Expect(testUI.Out).To(Say(expectedRequestHeaders))
-						Expect(testUI.Out).To(Say(expectedResponseHeaders))
-						Expect(testUI.Out).To(Say(expectedJSONResponse))
-					})
 				})
 			})
 		})
 	})
-
 })

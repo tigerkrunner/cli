@@ -2,102 +2,98 @@
 package v6fakes
 
 import (
+	http "net/http"
 	sync "sync"
 
 	v6 "code.cloudfoundry.org/cli/command/v6"
 )
 
 type FakeCurlActor struct {
-	MakeRequestStub        func(string) (string, string, string)
-	makeRequestMutex       sync.RWMutex
-	makeRequestArgsForCall []struct {
-		arg1 string
+	DoStub        func(*http.Request) (*http.Response, error)
+	doMutex       sync.RWMutex
+	doArgsForCall []struct {
+		arg1 *http.Request
 	}
-	makeRequestReturns struct {
-		result1 string
-		result2 string
-		result3 string
+	doReturns struct {
+		result1 *http.Response
+		result2 error
 	}
-	makeRequestReturnsOnCall map[int]struct {
-		result1 string
-		result2 string
-		result3 string
+	doReturnsOnCall map[int]struct {
+		result1 *http.Response
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCurlActor) MakeRequest(arg1 string) (string, string, string) {
-	fake.makeRequestMutex.Lock()
-	ret, specificReturn := fake.makeRequestReturnsOnCall[len(fake.makeRequestArgsForCall)]
-	fake.makeRequestArgsForCall = append(fake.makeRequestArgsForCall, struct {
-		arg1 string
+func (fake *FakeCurlActor) Do(arg1 *http.Request) (*http.Response, error) {
+	fake.doMutex.Lock()
+	ret, specificReturn := fake.doReturnsOnCall[len(fake.doArgsForCall)]
+	fake.doArgsForCall = append(fake.doArgsForCall, struct {
+		arg1 *http.Request
 	}{arg1})
-	fake.recordInvocation("MakeRequest", []interface{}{arg1})
-	fake.makeRequestMutex.Unlock()
-	if fake.MakeRequestStub != nil {
-		return fake.MakeRequestStub(arg1)
+	fake.recordInvocation("Do", []interface{}{arg1})
+	fake.doMutex.Unlock()
+	if fake.DoStub != nil {
+		return fake.DoStub(arg1)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
+		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.makeRequestReturns
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+	fakeReturns := fake.doReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeCurlActor) MakeRequestCallCount() int {
-	fake.makeRequestMutex.RLock()
-	defer fake.makeRequestMutex.RUnlock()
-	return len(fake.makeRequestArgsForCall)
+func (fake *FakeCurlActor) DoCallCount() int {
+	fake.doMutex.RLock()
+	defer fake.doMutex.RUnlock()
+	return len(fake.doArgsForCall)
 }
 
-func (fake *FakeCurlActor) MakeRequestCalls(stub func(string) (string, string, string)) {
-	fake.makeRequestMutex.Lock()
-	defer fake.makeRequestMutex.Unlock()
-	fake.MakeRequestStub = stub
+func (fake *FakeCurlActor) DoCalls(stub func(*http.Request) (*http.Response, error)) {
+	fake.doMutex.Lock()
+	defer fake.doMutex.Unlock()
+	fake.DoStub = stub
 }
 
-func (fake *FakeCurlActor) MakeRequestArgsForCall(i int) string {
-	fake.makeRequestMutex.RLock()
-	defer fake.makeRequestMutex.RUnlock()
-	argsForCall := fake.makeRequestArgsForCall[i]
+func (fake *FakeCurlActor) DoArgsForCall(i int) *http.Request {
+	fake.doMutex.RLock()
+	defer fake.doMutex.RUnlock()
+	argsForCall := fake.doArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeCurlActor) MakeRequestReturns(result1 string, result2 string, result3 string) {
-	fake.makeRequestMutex.Lock()
-	defer fake.makeRequestMutex.Unlock()
-	fake.MakeRequestStub = nil
-	fake.makeRequestReturns = struct {
-		result1 string
-		result2 string
-		result3 string
-	}{result1, result2, result3}
+func (fake *FakeCurlActor) DoReturns(result1 *http.Response, result2 error) {
+	fake.doMutex.Lock()
+	defer fake.doMutex.Unlock()
+	fake.DoStub = nil
+	fake.doReturns = struct {
+		result1 *http.Response
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeCurlActor) MakeRequestReturnsOnCall(i int, result1 string, result2 string, result3 string) {
-	fake.makeRequestMutex.Lock()
-	defer fake.makeRequestMutex.Unlock()
-	fake.MakeRequestStub = nil
-	if fake.makeRequestReturnsOnCall == nil {
-		fake.makeRequestReturnsOnCall = make(map[int]struct {
-			result1 string
-			result2 string
-			result3 string
+func (fake *FakeCurlActor) DoReturnsOnCall(i int, result1 *http.Response, result2 error) {
+	fake.doMutex.Lock()
+	defer fake.doMutex.Unlock()
+	fake.DoStub = nil
+	if fake.doReturnsOnCall == nil {
+		fake.doReturnsOnCall = make(map[int]struct {
+			result1 *http.Response
+			result2 error
 		})
 	}
-	fake.makeRequestReturnsOnCall[i] = struct {
-		result1 string
-		result2 string
-		result3 string
-	}{result1, result2, result3}
+	fake.doReturnsOnCall[i] = struct {
+		result1 *http.Response
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeCurlActor) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.makeRequestMutex.RLock()
-	defer fake.makeRequestMutex.RUnlock()
+	fake.doMutex.RLock()
+	defer fake.doMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

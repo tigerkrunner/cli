@@ -1,17 +1,25 @@
 package v6
 
 import (
-	"code.cloudfoundry.org/cli/actor/v2action"
+	"crypto/tls"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"time"
+
 	"code.cloudfoundry.org/cli/command"
 	"code.cloudfoundry.org/cli/command/flag"
 	"code.cloudfoundry.org/cli/command/translatableerror"
-	"code.cloudfoundry.org/cli/command/v6/shared"
+	"code.cloudfoundry.org/cli/util/ui"
 )
 
 //go:generate counterfeiter . CurlActor
 
 type CurlActor interface {
-	MakeRequest(path string) (string, string, string)
+	Do(req *http.Request) (*http.Response, error)
 }
 
 type CurlCommand struct {
@@ -22,21 +30,29 @@ type CurlCommand struct {
 	IncludeReponseHeaders bool            `short:"i" description:"Include response headers in the output"`
 	OutputFile            flag.Path       `long:"output" description:"Write curl body to FILE instead of stdout"`
 	usage                 interface{}     `usage:"CF_NAME curl PATH [-iv] [-X METHOD] [-H HEADER] [-d DATA] [--output FILE]\n\n   By default 'CF_NAME curl' will perform a GET to the specified PATH. If data\n   is provided via -d, a POST will be performed instead, and the Content-Type\n   will be set to application/json. You may override headers with -H and the\n   request method with -X.\n\n   For API documentation, please visit http://apidocs.cloudfoundry.org.\n\nEXAMPLES:\n   CF_NAME curl \"/v2/apps\" -X GET -H \"Content-Type: application/x-www-form-urlencoded\" -d 'q=name:myapp'\n   CF_NAME curl \"/v2/apps\" -d @/path/to/file"`
-	UI                    command.UI
 	Config                command.Config
+	UI                    *ui.UI
 	Actor                 CurlActor
 }
 
 func (cmd *CurlCommand) Setup(config command.Config, ui command.UI) error {
-	cmd.UI = ui
 	cmd.Config = config
 
-	ccClient, uaaClient, err := shared.NewClients(config, ui, true)
-	if err != nil {
-		return err
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: cmd.Config.SkipSSLValidation(),
+		},
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			KeepAlive: 30 * time.Second,
+			Timeout:   cmd.Config.DialTimeout(),
+		}).DialContext,
 	}
-	// // cmd.Actor = sharedaction.NewActor(config)
-	cmd.Actor = v2action.NewActor(ccClient, uaaClient, config)
+
+	client := http.Client{
+		Transport: tr,
+	}
+	cmd.Actor = &client
 	return nil
 }
 
@@ -51,11 +67,30 @@ func (cmd CurlCommand) Execute(args []string) error {
 		}
 	}
 
-	requestHeaders, responseHeaders, responseJSON := cmd.Actor.MakeRequest(cmd.RequiredArgs.Path)
-	if verbose, _ := cmd.Config.Verbose(); verbose {
-		cmd.UI.DisplayText(requestHeaders)
-		cmd.UI.DisplayText(responseHeaders)
+	path, err := url.Parse(cmd.RequiredArgs.Path)
+	host, err := url.Parse(cmd.Config.Target())
+	combindedURL := host.ResolveReference(path)
+
+	req, err := http.NewRequest(http.MethodGet, combindedURL.String(), nil)
+
+	cmd.UI.DisplayText(fmt.Sprintf("REQUEST: [%s]", time.Now().Format(time.RFC3339)))
+	reqBytes, err := httputil.DumpRequestOut(req, false)
+	cmd.UI.DisplayText(string(reqBytes))
+	if err != nil {
+		return err
 	}
-	cmd.UI.DisplayText(responseJSON)
-	return nil
+
+	resp, err := cmd.Actor.Do(req)
+	if err != nil {
+		return err
+	}
+
+	cmd.UI.DisplayText(fmt.Sprintf("RESPONSE: [%s]", time.Now().Format(time.RFC3339)))
+	respBytes, err := httputil.DumpResponse(resp, false)
+	if err != nil {
+		return err
+	}
+	cmd.UI.DisplayText(string(respBytes))
+	_, err = io.Copy(cmd.UI.Out, resp.Body)
+	return err
 }
