@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"time"
 
@@ -69,17 +70,18 @@ func (cmd CurlCommand) Execute(args []string) error {
 		}
 	}
 
-	path, err := url.Parse(cmd.RequiredArgs.Path)
+	cleanedPath := filepath.Clean(cmd.RequiredArgs.Path)
+	path, err := url.Parse(cleanedPath)
 	host, err := url.Parse(cmd.Config.Target())
-	combindedURL := host.ResolveReference(path)
+	combinedURL := host.ResolveReference(path)
 
-	req, err := http.NewRequest(http.MethodGet, combindedURL.String(), nil)
+	req, err := http.NewRequest(http.MethodGet, combinedURL.String(), nil)
 
 	req.Header.Set("User-Agent", shared.BuildUserAgent(cmd.Config))
 
 	accessToken := cmd.Config.AccessToken()
 	if accessToken != "" {
-		req.Header.Set("Authorization", "bearer "+accessToken)
+		req.Header.Set("Authorization", accessToken)
 	}
 
 	verbose, _ := cmd.Config.Verbose()

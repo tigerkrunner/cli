@@ -48,15 +48,15 @@ var _ = FDescribe("curl command", func() {
 		Eventually(session).Should(Say(`REQUEST: .+`))
 		Eventually(session).Should(Say(`(GET|POST|PUT|DELETE) /v2/apps HTTP/1.1`))
 		Eventually(session).Should(Say(`Host: .+`))
-		Eventually(session).Should(Say(`Accept: .+`))
-		Eventually(session).Should(Say(`Authorization:\s+\[PRIVATE DATA HIDDEN\]`))
-		Eventually(session).Should(Say(`Content-Type: .+`))
 		Eventually(session).Should(Say(`User-Agent: .+`))
+		// TODO Need to decide if this should be the default behavior
+		// Eventually(session).Should(Say(`Accept: .+`))
+		// Eventually(session).Should(Say(`Content-Type: .+`))
+		Eventually(session).Should(Say(`Authorization:\s+\[PRIVATE DATA HIDDEN\]`))
 	}
 
 	var ExpectResponseHeaders = func(session *Session) {
 		Eventually(session).Should(Say("HTTP/1.1 200 OK"))
-		Eventually(session).Should(Say(`Connection: .+`))
 		Eventually(session).Should(Say(`Content-Length: .+`))
 		Eventually(session).Should(Say(`Content-Type: .+`))
 		Eventually(session).Should(Say(`Date: .+`))
@@ -203,7 +203,10 @@ var _ = FDescribe("curl command", func() {
 
 			When("-v flag is set", func() {
 				It("displays the request headers and response headers", func() {
-					session := helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "/v2/apps", "-v")
+					session := helpers.CF("api")
+					Eventually(session).Should(Exit(0))
+
+					session = helpers.CFWithEnv(ExperimentalEnvVariables, "curl", "/v2/apps", "-v")
 					Eventually(session).Should(Exit(0))
 
 					ExpectRequestHeaders(session)

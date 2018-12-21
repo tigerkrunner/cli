@@ -18,7 +18,7 @@ import (
 	"code.cloudfoundry.org/cli/util/ui"
 )
 
-var _ = FDescribe("CurlCommand", func() {
+var _ = Describe("CurlCommand", func() {
 	var (
 		cmd        CurlCommand
 		testUI     *ui.UI
@@ -67,6 +67,28 @@ var _ = FDescribe("CurlCommand", func() {
 				fakeConfig.CurlExperimentalReturns(true)
 			})
 
+			When("the URL has multiple slashes", func() {
+				BeforeEach(func() {
+					cmd.RequiredArgs.Path = "////v2/apps////"
+					buf := bytes.NewBufferString("my response")
+					body := ioutil.NopCloser(buf)
+					resp := &http.Response{
+						Body:       body,
+						Header:     http.Header{},
+						StatusCode: 200,
+					}
+					fakeActor.DoReturns(resp, nil)
+				})
+
+				It("removes the slashes", func() {
+					Expect(executeErr).ToNot(HaveOccurred())
+
+					req := fakeActor.DoArgsForCall(0)
+					Expect(req.Method).To(Equal(http.MethodGet))
+					Expect(req.URL.Path).To(Equal("/v2/apps"))
+				})
+			})
+
 			When("the server returns a response", func() {
 				BeforeEach(func() {
 					buf := bytes.NewBufferString("my fancy response")
@@ -108,7 +130,7 @@ var _ = FDescribe("CurlCommand", func() {
 						req := fakeActor.DoArgsForCall(0)
 						authHeader, ok := req.Header["Authorization"]
 						Expect(ok).To(BeTrue())
-						Expect(authHeader).To(ConsistOf("bearer look a token"))
+						Expect(authHeader).To(ConsistOf("look a token"))
 					})
 
 					When("verbose logging is turned on", func() {
