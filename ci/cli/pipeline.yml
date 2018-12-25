@@ -28,7 +28,7 @@ resources:
   type: git
   source:
     uri: https://github.com/cloudfoundry/cli
-    branch: master
+    branch: wip-lola-env
     paths: *ciPaths
 
 - name: cf-acceptance-tests
