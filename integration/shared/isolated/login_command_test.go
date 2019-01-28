@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 	"runtime"
+	"strings"
 
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
@@ -170,6 +171,27 @@ var _ = Describe("login command", func() {
 						Eventually(session.Err).Should(Say("TIP: If you are behind a firewall and require an HTTP proxy, verify the https_proxy environment variable is correctly set. Else, check your network connection."))
 						Eventually(session).Should(Exit(1))
 					})
+				})
+			})
+			Describe("SSL Validation", func() {
+				When("the ssl certificate is invalid", func() {
+					XIt("fails with an error message", func() {
+						apiURL := helpers.GetAPI()
+						trimmedURL := strings.Trim(apiURL, "https://")
+						session := helpers.CF("login", "-a", apiURL)
+						Eventually(session).Should(Exit(1))
+						Expect(session).Should(Say("API endpoint: %s", apiURL))
+						Expect(session).Should(Say("FAILED"))
+						Expect(session).Should(Say("Invalid SSL Cert for %s", trimmedURL))
+						Expect(session).Should(Say("TIP: Use 'cf login --skip-ssl-validation' to continue with an insecure API endpoint"))
+
+						session = helpers.CF("api")
+						Eventually(session).Should(Exit(0))
+						Expect(session).ShouldNot(Say("api endpoint:   %s", apiURL))
+					})
+				})
+				When("the ssl certificate is valid", func() {
+
 				})
 			})
 		})
