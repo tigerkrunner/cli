@@ -263,7 +263,7 @@ var _ = Describe("GetApplicationChanges", func() {
 		})
 
 		DescribeTable("non-empty values",
-			func(existingTimeout int, newTimeout int, currentValue int, newValue int) {
+			func(existingTimeout uint64, newTimeout uint64, currentValue int, newValue int) {
 				appConfig.CurrentApplication.HealthCheckTimeout = existingTimeout
 				appConfig.DesiredApplication.HealthCheckTimeout = newTimeout
 

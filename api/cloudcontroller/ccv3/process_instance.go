@@ -35,7 +35,7 @@ type ProcessInstance struct {
 	// Type is the process type for the instance.
 	Type string
 	// Uptime is the uptime in seconds for the instance.
-	Uptime uint64
+	Uptime int64
 }
 
 // UnmarshalJSON helps unmarshal a V3 Cloud Controller Instance response.
@@ -48,7 +48,7 @@ func (instance *ProcessInstance) UnmarshalJSON(data []byte) error {
 		MemQuota         uint64 `json:"mem_quota"`
 		State            string `json:"state"`
 		Type             string `json:"type"`
-		Uptime           uint64 `json:"uptime"`
+		Uptime           int64  `json:"uptime"`
 		Usage            struct {
 			CPU  float64 `json:"cpu"`
 			Mem  uint64  `json:"mem"`
