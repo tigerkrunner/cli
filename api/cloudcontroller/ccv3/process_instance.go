@@ -21,7 +21,7 @@ type ProcessInstance struct {
 	// DiskUsage is the current disk usage of the instance.
 	DiskUsage uint64
 	// Index is the index of the instance.
-	Index int
+	Index int64
 	// Isolation segment is the current isolation segment that the instance is
 	// running on. The value is empty when the instance is not placed on a
 	// particular isolation segment.
@@ -35,7 +35,7 @@ type ProcessInstance struct {
 	// Type is the process type for the instance.
 	Type string
 	// Uptime is the uptime in seconds for the instance.
-	Uptime int
+	Uptime uint64
 }
 
 // UnmarshalJSON helps unmarshal a V3 Cloud Controller Instance response.
@@ -43,12 +43,12 @@ func (instance *ProcessInstance) UnmarshalJSON(data []byte) error {
 	var inputInstance struct {
 		Details          string `json:"details"`
 		DiskQuota        uint64 `json:"disk_quota"`
-		Index            int    `json:"index"`
+		Index            int64  `json:"index"`
 		IsolationSegment string `json:"isolation_segment"`
 		MemQuota         uint64 `json:"mem_quota"`
 		State            string `json:"state"`
 		Type             string `json:"type"`
-		Uptime           int    `json:"uptime"`
+		Uptime           uint64 `json:"uptime"`
 		Usage            struct {
 			CPU  float64 `json:"cpu"`
 			Mem  uint64  `json:"mem"`
