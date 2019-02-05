@@ -15,7 +15,7 @@ import (
 	"github.com/onsi/gomega/ghttp"
 )
 
-var _ = Describe("login command", func() {
+var _ = FDescribe("login command", func() {
 	Describe("Help Text", func() {
 		When("--help flag is set", func() {
 			It("displays the command usage", func() {
@@ -242,6 +242,25 @@ var _ = Describe("login command", func() {
 				Eventually(session).Should(Say("Warning: Insecure http API endpoint detected: secure https API endpoints are recommended"))
 				Eventually(session).Should(Exit(0))
 			})
+		})
+
+		When("the SSL_CERT_FILE environment variable is set to the path of a file that contains the CA for the Cloud Foundry", func() {
+			BeforeEach(func() {
+				if skipSSLValidation != "" {
+					Skip("SKIP_SSL_VALIDATION is enabled and is " + skipSSLValidation)
+				}
+			})
+			FIt("trusts the cert and allows the users to log in", func() {
+				// FYI, to Wednesday us: if SSL_CERT_DIR is passed in to the ginkgo process, it will flow down to the cf command we run with gexec.
+				// Next steps: capture/control the value of SSL_CERT_DIR and provided/reset as needed with helpers.CFWithEnv(...)
+				session := helpers.CF("login", "-a", helpers.GetAPI())
+
+				Eventually(session).Should(Exit(0))
+			})
+		})
+
+		When("the SSL_CERT_DIR environment variable is set to a directory that contains the CA for the Cloud Foundry", func() {
+			It("trusts the cert and allows the users to log in", func() {})
 		})
 	})
 
