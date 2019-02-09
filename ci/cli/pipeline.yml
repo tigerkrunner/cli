@@ -236,7 +236,7 @@ resources:
   source:
     url: ((slack-webhook-url))
 
-- name: vars-store
+- name: bbl-state-dir
   type: git
   source:
     uri: git@github.com:cloudfoundry/cli-private
@@ -349,7 +349,7 @@ jobs:
       passed: [build-binaries]
       trigger: true
     - get: cli-ci
-    - get: vars-store
+    - get: bbl-state-dir
     - put: bosh-lock
       resource: gcp-bosh-pool
       timeout: 2h
@@ -392,7 +392,7 @@ jobs:
       passed: [build-binaries]
       trigger: true
     - get: cli-ci
-    - get: vars-store
+    - get: bbl-state-dir
     - put: bosh-lock
       resource: gcp-bosh-pool
       timeout: 2h
@@ -433,7 +433,7 @@ jobs:
       passed: [build-binaries]
       trigger: true
     - get: cli-ci
-    - get: vars-store
+    - get: bbl-state-dir
     - put: bosh-lock
       resource: gcp-bosh-pool
       timeout: 2h
@@ -488,7 +488,7 @@ jobs:
       passed: [build-binaries]
       trigger: true
     - get: cli-ci
-    - get: vars-store
+    - get: bbl-state-dir
     - put: bosh-lock
       resource: legacy-gcp-bosh-pool
       timeout: 2h
@@ -611,7 +611,7 @@ jobs:
       passed: [integration-linux, integration-windows, integration-experimental, integration-legacy]
       trigger: true
     - get: cli-ci
-    - get: vars-store
+    - get: bbl-state-dir
     - put: bosh-lock
       resource: gcp-bosh-pool
       timeout: 2h

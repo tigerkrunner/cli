@@ -10,7 +10,7 @@ inputs:
 - name: cli-ci
 - name: cf-cli-binaries
 - name: bosh-lock
-- name: vars-store
+- name: bbl-state-dir
 
 outputs:
 - name: cleanup-integration-outputs
@@ -29,7 +29,7 @@ run:
     CERT_DIR=$PWD/cleanup-integration-outputs/cert_dir
     mkdir -p $CERT_DIR
 
-    pushd vars-store/ci/infrastructure/$ENV
+    pushd bbl-state-dir/ci/infrastructure/$ENV
       if [[ "$(cat bbl-state.json | jq -r '.bblVersion')" =~ v5 ]]; then
         eval "$(bbl5 print-env | grep -v '^ssh')"
         export JUMPBOX_IP=$(bosh int vars/jumpbox-vars-file.yml --path /external_ip)
@@ -57,7 +57,7 @@ run:
     echo $CF_INT_OIDC_PASSWORD > cleanup-integration-outputs/uaa-oidc-password
 
     # get CA certs for load balancer and router
-    bosh interpolate vars-store/ci/infrastructure/$ENV/bbl-state.json --path /lb/cert > $CERT_DIR/$ENV.lb.cert
+    bosh interpolate bbl-state-dir/ci/infrastructure/$ENV/bbl-state.json --path /lb/cert > $CERT_DIR/$ENV.lb.cert
 
     set -ex
 

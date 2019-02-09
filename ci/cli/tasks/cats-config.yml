@@ -9,7 +9,7 @@ image_resource:
 inputs:
   - name: bosh-lock
   - name: cf-cli-binaries
-  - name: vars-store
+  - name: bbl-state-dir
 
 outputs:
   - name: cats-config
@@ -34,7 +34,7 @@ run:
 
     ENV=$(cat bosh-lock/name | cut -d "." -f 1)
 
-    pushd vars-store/ci/infrastructure/$ENV
+    pushd bbl-state-dir/ci/infrastructure/$ENV
       eval "$(bbl print-env)"
     popd
 

@@ -11,7 +11,7 @@ inputs:
   path: go/src/code.cloudfoundry.org/cli
 - name: cf-cli-binaries
 - name: bosh-lock
-- name: vars-store
+- name: bbl-state-dir
 
 params:
   CF_INT_CLIENT_ID:
@@ -31,7 +31,7 @@ run:
     export SSL_CERT_DIR=/tmp/cert_dir
     mkdir -p $SSL_CERT_DIR
 
-    pushd vars-store/ci/infrastructure/$ENV
+    pushd bbl-state-dir/ci/infrastructure/$ENV
       eval "$(bbl print-env)"
 
       bosh int bbl-state.json --path /lb/cert > $SSL_CERT_DIR/$ENV.lb.cert
