@@ -282,8 +282,7 @@ var _ = Describe("Application Config", func() {
 				When("the --random-route flag is provided", func() {
 					BeforeEach(func() {
 						manifestApps[0].RandomRoute = true
-						fakeRandomWordGenerator.RandomAdjectiveReturns("striped")
-						fakeRandomWordGenerator.RandomNounReturns("apple")
+						fakeRandomWordGenerator.BabbleReturns("striped-apple")
 					})
 
 					It("appends a random route to the current route for desired routes", func() {
@@ -334,8 +333,7 @@ var _ = Describe("Application Config", func() {
 			When("the --random-route flag is provided", func() {
 				BeforeEach(func() {
 					manifestApps[0].RandomRoute = true
-					fakeRandomWordGenerator.RandomAdjectiveReturns("striped")
-					fakeRandomWordGenerator.RandomNounReturns("apple")
+					fakeRandomWordGenerator.BabbleReturns("striped-apple")
 				})
 
 				It("appends a random route to the current route for desired routes", func() {
@@ -361,8 +359,7 @@ var _ = Describe("Application Config", func() {
 
 							manifestApps[0].Domain = "some-http-domain.com"
 							fakeV2Actor.GetDomainsByNameAndOrganizationReturns([]v2action.Domain{httpDomain}, v2action.Warnings{"domain-warnings-1", "domain-warnings-2"}, nil)
-							fakeRandomWordGenerator.RandomAdjectiveReturns("striped")
-							fakeRandomWordGenerator.RandomNounReturns("apple")
+							fakeRandomWordGenerator.BabbleReturns("striped-apple")
 						})
 
 						It("appends a random HTTP route to the desired routes", func() {

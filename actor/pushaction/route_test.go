@@ -1,6 +1,7 @@
 package pushaction_test
 
 import (
+	"code.cloudfoundry.org/cli/util/randomword"
 	"errors"
 	"strings"
 
@@ -916,8 +917,7 @@ var _ = Describe("Routes", func() {
 			BeforeEach(func() {
 				manifestApp.Domain = "some-domain"
 				domain.Name = "some-domain"
-				fakeRandomWordGenerator.RandomAdjectiveReturns("striped")
-				fakeRandomWordGenerator.RandomNounReturns("apple")
+				fakeRandomWordGenerator.BabbleReturns("red-striped-apple")
 
 				fakeV2Actor.GetDomainsByNameAndOrganizationReturns(
 					[]v2action.Domain{domain},
@@ -930,7 +930,7 @@ var _ = Describe("Routes", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 				Expect(randomRoute).To(Equal(v2action.Route{
 					Domain:    domain,
-					Host:      "some-app-name-striped-apple",
+					Host:      "some-app-name-red-striped-apple",
 					SpaceGUID: spaceGUID,
 				}))
 				Expect(warnings).To(ConsistOf("some-organization-domain-warning"))
@@ -939,6 +939,28 @@ var _ = Describe("Routes", func() {
 				domainsArg, orgGUIDArg := fakeV2Actor.GetDomainsByNameAndOrganizationArgsForCall(0)
 				Expect(domainsArg).To(ConsistOf("some-domain"))
 				Expect(orgGUIDArg).To(Equal("some-org-guid"))
+			})
+		})
+
+		When("checks length of host name", func() {
+			BeforeEach(func() {
+				manifestApp.Domain = "some-domain"
+				manifestApp.Name = "really-really-really-long-app-name"
+				fakeRandomWordGenerator.BabbleCalls(randomword.Generator{}.Babble)
+				domain.Name = "some-domain"
+
+				fakeV2Actor.GetDomainsByNameAndOrganizationReturns(
+					[]v2action.Domain{domain},
+					v2action.Warnings{"some-organization-domain-warning"},
+					nil,
+				)
+			})
+
+			It("host name is not longer than 63 characters", func() {
+				maxHostnameLength := 63
+				length := len(randomRoute.Host)
+				Expect(randomRoute.Host).To(ContainSubstring("really"))
+				Expect(length).Should(BeNumerically("<", maxHostnameLength))
 			})
 		})
 
@@ -974,8 +996,7 @@ var _ = Describe("Routes", func() {
 						v2action.Warnings{"some-organization-domain-warning"},
 						nil,
 					)
-					fakeRandomWordGenerator.RandomAdjectiveReturns("striped")
-					fakeRandomWordGenerator.RandomNounReturns("apple")
+					fakeRandomWordGenerator.BabbleReturns("red-striped-apple")
 				})
 
 				When("the app name is partially sanitized", func() {
@@ -988,7 +1009,7 @@ var _ = Describe("Routes", func() {
 						Expect(randomRoute).To(Equal(v2action.Route{
 							Domain:    domain,
 							SpaceGUID: spaceGUID,
-							Host:      "a--b-striped-apple",
+							Host:      "a--b-red-striped-apple",
 						}))
 						Expect(warnings).To(ConsistOf("some-organization-domain-warning"))
 					})
@@ -1004,7 +1025,7 @@ var _ = Describe("Routes", func() {
 						Expect(randomRoute).To(Equal(v2action.Route{
 							Domain:    domain,
 							SpaceGUID: spaceGUID,
-							Host:      "striped-apple",
+							Host:      "red-striped-apple",
 						}))
 						Expect(warnings).To(ConsistOf("some-organization-domain-warning"))
 					})

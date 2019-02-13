@@ -196,7 +196,12 @@ zebra`
 type Generator struct{}
 
 func (gen Generator) Babble() string {
-	return fmt.Sprintf("%s-%s", gen.RandomAdjective(), gen.RandomNoun())
+	adj1 := gen.RandomAdjective()
+	adj2 := gen.RandomAdjective()
+	for adj1 == adj2 {
+		adj2 = gen.RandomAdjective()
+	}
+	return fmt.Sprintf("%s-%s-%s", adj1, adj2, gen.RandomNoun())
 }
 
 func (Generator) RandomAdjective() string {

@@ -1,6 +1,7 @@
 package randomword_test
 
 import (
+	"strings"
 	"time"
 
 	. "code.cloudfoundry.org/cli/util/randomword"
@@ -51,7 +52,17 @@ var _ = Describe("Generator", func() {
 	Describe("Babble", func() {
 		It("generates a random adjective noun pair each time it is called", func() {
 			wordPair := gen.Babble()
-			Expect(wordPair).To(MatchRegexp(`^\w+-\w+$`))
+			Expect(wordPair).To(MatchRegexp(`^\w+-\w+-\w+$`))
+		})
+	})
+
+	Describe("Non-repeating adjectives", func() {
+		It("generates a string of three words where the first two adjectives are distinct", func() {
+			for i := 0; i < 50; i++ {
+				wordPair := gen.Babble()
+				result := strings.Split(wordPair, "-")
+				Expect(result[0]).ToNot(Equal(result[1]))
+			}
 		})
 	})
 })

@@ -199,7 +199,12 @@ func (actor Actor) GenerateRandomRoute(manifestApp manifest.Application, spaceGU
 
 	var hostname string
 	if domain.IsHTTP() {
-		hostname = fmt.Sprintf("%s-%s-%s", actor.sanitize(manifestApp.Name), actor.WordGenerator.RandomAdjective(), actor.WordGenerator.RandomNoun())
+		randomWords := actor.WordGenerator.Babble()
+		hostname = actor.sanitize(manifestApp.Name) + "-" + randomWords
+		for len(hostname) > 62 {
+			randomWords = actor.WordGenerator.Babble()
+			hostname = actor.sanitize(manifestApp.Name) + "-" + randomWords
+		}
 		hostname = strings.Trim(hostname, "-")
 	}
 
