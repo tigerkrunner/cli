@@ -29,14 +29,16 @@ func (actor Actor) Actualize(state PushState, progressBar ProgressBar) (
 		defer close(errorStream)
 
 		var err error
-
-		state, err = actor.CreateOrUpdateApplication(state, warningsStream, eventStream)
-		if err != nil {
-			errorStream <- err
-			return
+		if shouldUpdateApplication(state) {
+			state, err = actor.UpdateApplication(state, warningsStream, eventStream)
+			if err != nil {
+				errorStream <- err
+				return
+			}
+			stateStream <- state
 		}
-		stateStream <- state
 
+		// TODO Remove this
 		if len(state.Manifest) > 0 {
 			err = actor.ApplyManifest(state, warningsStream, eventStream)
 			if err != nil {
@@ -192,32 +194,18 @@ func (actor Actor) CreateAndUploadApplicationBits(state PushState, progressBar P
 	return pkg, nil
 }
 
-func (actor Actor) CreateOrUpdateApplication(state PushState, warningsStream chan Warnings, eventStream chan Event) (PushState, error) {
-	if state.Application.GUID == "" { // Create
-		log.WithField("Name", state.Application.Name).Info("creating app")
-		eventStream <- CreatingApplication
+func (actor Actor) UpdateApplication(state PushState, warningsStream chan Warnings, eventStream chan Event) (PushState, error) {
+	log.WithField("Name", state.Application.Name).Info("updating app")
+	eventStream <- SkippingApplicationCreation
 
-		createdApp, warnings, err := actor.V7Actor.CreateApplicationInSpace(state.Application, state.SpaceGUID)
-		state.Application = createdApp
-		warningsStream <- Warnings(warnings)
-		if err != nil {
-			return state, err
-		}
-
-		eventStream <- CreatedApplication
-	} else { // Update
-		log.WithField("Name", state.Application.Name).Info("skipping app creation as it has a GUID")
-		eventStream <- SkippingApplicationCreation
-
-		application, warnings, err := actor.V7Actor.UpdateApplication(state.Application)
-		state.Application = application
-		warningsStream <- Warnings(warnings)
-		if err != nil {
-			return state, err
-		}
-
-		eventStream <- UpdatedApplication
+	application, warnings, err := actor.V7Actor.UpdateApplication(state.Application)
+	state.Application = application
+	warningsStream <- Warnings(warnings)
+	if err != nil {
+		return state, err
 	}
+
+	eventStream <- UpdatedApplication
 
 	return state, nil
 }
@@ -268,6 +256,10 @@ func (actor Actor) ScaleProcess(state PushState, warningsStream chan Warnings, e
 	}
 
 	return nil
+}
+
+func shouldUpdateApplication(state PushState) bool {
+	return state.Overrides.Buildpacks != nil || state.Overrides.DockerImage != ""
 }
 
 func shouldScaleProcess(state PushState) bool {

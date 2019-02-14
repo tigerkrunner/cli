@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/cli/actor/sharedaction"
 	"code.cloudfoundry.org/cli/actor/v2action"
 	"code.cloudfoundry.org/cli/actor/v7action"
+	"code.cloudfoundry.org/cli/actor/v7pushaction"
 	. "code.cloudfoundry.org/cli/actor/v7pushaction"
 	"code.cloudfoundry.org/cli/actor/v7pushaction/v7pushactionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
@@ -134,9 +135,13 @@ var _ = Describe("Actualize", func() {
 	})
 
 	Describe("application", func() {
-		When("the application exists", func() {
+		BeforeEach(func() {
+			state.Application.GUID = "some-app-guid"
+		})
+
+		When("there are flag overrides", func() {
 			BeforeEach(func() {
-				state.Application.GUID = "some-app-guid"
+				state.Overrides.Disk = types.NullUint64{IsSet: true, Value: 5}
 			})
 
 			When("updated succesfully", func() {
@@ -164,8 +169,6 @@ var _ = Describe("Actualize", func() {
 								LifecycleBuildpacks: []string{"some-buildpack-1"},
 							}),
 						})))
-
-					Consistently(fakeV7Actor.CreateApplicationInSpaceCallCount).Should(Equal(0))
 				})
 			})
 
@@ -189,52 +192,14 @@ var _ = Describe("Actualize", func() {
 			})
 		})
 
-		When("the application does not exist", func() {
-			When("the creation is successful", func() {
-				var expectedApp v7action.Application
-
-				BeforeEach(func() {
-					expectedApp = v7action.Application{
-						GUID: "some-app-guid",
-						Name: "some-app",
-					}
-
-					fakeV7Actor.CreateApplicationInSpaceReturns(expectedApp, v7action.Warnings{"some-app-warnings"}, nil)
-				})
-
-				It("returns an app created event, warnings, and updated state", func() {
-					Eventually(getNextEvent(stateStream, eventStream, warningsStream)).Should(Equal(CreatingApplication))
-					Eventually(warningsStream).Should(Receive(ConsistOf("some-app-warnings")))
-					Eventually(getNextEvent(stateStream, eventStream, warningsStream)).Should(Equal(CreatedApplication))
-					Eventually(stateStream).Should(Receive(MatchFields(IgnoreExtras,
-						Fields{
-							"Application": Equal(expectedApp),
-						})))
-				})
-
-				It("creates the application", func() {
-					Eventually(getNextEvent(stateStream, eventStream, warningsStream)).Should(Equal(CreatingApplication))
-					Eventually(fakeV7Actor.CreateApplicationInSpaceCallCount).Should(Equal(1))
-					passedApp, passedSpaceGUID := fakeV7Actor.CreateApplicationInSpaceArgsForCall(0)
-					Expect(passedApp).To(Equal(state.Application))
-					Expect(passedSpaceGUID).To(Equal(state.SpaceGUID))
-				})
+		When("there are not flag overrides", func() {
+			BeforeEach(func() {
+				state.Overrides = v7pushaction.FlagOverrides{}
 			})
 
-			When("the creation errors", func() {
-				var expectedErr error
-
-				BeforeEach(func() {
-					expectedErr = errors.New("SPICY!!")
-
-					fakeV7Actor.CreateApplicationInSpaceReturns(v7action.Application{}, v7action.Warnings{"some-app-warnings"}, expectedErr)
-				})
-
-				It("returns warnings and error", func() {
-					Eventually(getNextEvent(stateStream, eventStream, warningsStream)).Should(Equal(CreatingApplication))
-					Eventually(warningsStream).Should(Receive(ConsistOf("some-app-warnings")))
-					Eventually(errorStream).Should(Receive(MatchError(expectedErr)))
-				})
+			FIt("does not update the application", func() {
+				Consistently(getNextEvent(stateStream, eventStream, warningsStream)).ShouldNot(Equal(SkippingApplicationCreation))
+				Consistently(fakeV7Actor.UpdateApplicationCallCount).Should(Equal(0))
 			})
 		})
 	})

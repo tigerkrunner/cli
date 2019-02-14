@@ -34,10 +34,12 @@ type ProgressBar interface {
 //go:generate counterfeiter . PushActor
 
 type PushActor interface {
+	// Prepare the space by creating needed apps/applying the manifest
+	PrepareSpace(appName string, spaceGUID string, parser *manifestparser.Parser) (<-chan []string, <-chan v7pushaction.Event, <-chan v7pushaction.Warnings, <-chan error)
 	// Actualize applies any necessary changes.
 	Actualize(state v7pushaction.PushState, progressBar v7pushaction.ProgressBar) (<-chan v7pushaction.PushState, <-chan v7pushaction.Event, <-chan v7pushaction.Warnings, <-chan error)
 	// Conceptualize figures out the state of the world.
-	Conceptualize(appName string, spaceGUID string, orgGUID string, currentDir string, flagOverrides v7pushaction.FlagOverrides, manifest []byte) ([]v7pushaction.PushState, v7pushaction.Warnings, error)
+	Conceptualize(appName []string, spaceGUID string, orgGUID string, currentDir string, flagOverrides v7pushaction.FlagOverrides) ([]v7pushaction.PushState, v7pushaction.Warnings, error)
 }
 
 //go:generate counterfeiter . V7ActorForPush
@@ -128,12 +130,19 @@ func (cmd PushCommand) Execute(args []string) error {
 		return err
 	}
 
-	var manifest []byte
+	var manifestParser *manifestparser.Parser
 	if !cmd.NoManifest {
-		if manifest, err = cmd.readManifest(); err != nil {
+		if manifestParser, err = cmd.readManifest(); err != nil {
 			return err
 		}
 	}
+
+	appNamesStream, eventStream, warningsStream, errorStream := cmd.Actor.PrepareSpace(
+		cmd.RequiredArgs.AppName,
+		cmd.Config.TargetedSpace().GUID,
+		manifestParser,
+	)
+	appNames, err := cmd.processPrepareStreams(appNamesStream, eventStream, warningsStream, errorStream)
 
 	overrides, err := cmd.GetFlagOverrides()
 	if err != nil {
@@ -153,15 +162,13 @@ func (cmd PushCommand) Execute(args []string) error {
 	})
 
 	cmd.UI.DisplayText("Getting app info...")
-
 	log.Info("generating the app state")
 	pushState, warnings, err := cmd.Actor.Conceptualize(
-		cmd.RequiredArgs.AppName,
+		appNames,
 		cmd.Config.TargetedSpace().GUID,
 		cmd.Config.TargetedOrganization().GUID,
 		cmd.PWD,
 		overrides,
-		manifest,
 	)
 	cmd.UI.DisplayWarnings(warnings)
 	if err != nil {
@@ -219,6 +226,63 @@ func (cmd PushCommand) Execute(args []string) error {
 	return nil
 }
 
+func (cmd PushCommand) processPrepareStreams(
+	appNamesStream <-chan []string,
+	eventStream <-chan v7pushaction.Event,
+	warningsStream <-chan v7pushaction.Warnings,
+	errorStream <-chan error,
+) ([]string, error) {
+	var namesClosed, eventClosed, warningsClosed, errClosed bool
+	var appNames []string
+	var err error
+
+	for {
+		select {
+		case names, ok := <-appNamesStream:
+			if !ok {
+				if !namesClosed {
+					log.Debug("processing config stream closed")
+				}
+				namesClosed = true
+				break
+			}
+			appNames = names
+		case event, ok := <-eventStream:
+			if !ok {
+				if !eventClosed {
+					log.Debug("processing event stream closed")
+				}
+				eventClosed = true
+				break
+			}
+			cmd.processEvent(cmd.RequiredArgs.AppName, event)
+		case warnings, ok := <-warningsStream:
+			if !ok {
+				if !warningsClosed {
+					log.Debug("processing warnings stream closed")
+				}
+				warningsClosed = true
+				break
+			}
+			cmd.UI.DisplayWarnings(warnings)
+		case receivedError, ok := <-errorStream:
+			if !ok {
+				if !errClosed {
+					log.Debug("processing error stream closed")
+				}
+				errClosed = true
+				break
+			}
+			err = receivedError
+		}
+
+		if namesClosed && eventClosed && warningsClosed && errClosed {
+			break
+		}
+	}
+
+	return appNames, err
+}
 func (cmd PushCommand) processApplyStreams(
 	appName string,
 	stateStream <-chan v7pushaction.PushState,
@@ -346,7 +410,7 @@ func (cmd PushCommand) getLogs(logStream <-chan *v7action.LogMessage, errStream 
 	}
 }
 
-func (cmd PushCommand) readManifest() ([]byte, error) {
+func (cmd PushCommand) readManifest() (*manifestparser.Parser, error) {
 	log.Info("reading manifest if exists")
 	pathsToVarsFiles := []string{}
 	for _, varfilepath := range cmd.PathsToVarsFiles {
@@ -358,7 +422,7 @@ func (cmd PushCommand) readManifest() ([]byte, error) {
 	if len(cmd.PathToManifest) != 0 {
 		log.WithField("manifestPath", cmd.PathToManifest).Debug("reading '-f' provided manifest")
 		err := parser.InterpolateAndParse(string(cmd.PathToManifest), pathsToVarsFiles, cmd.Vars)
-		return parser.FullRawManifest(), err
+		return parser, err
 	}
 
 	pathToManifest := filepath.Join(cmd.PWD, "manifest.yml")
@@ -367,12 +431,12 @@ func (cmd PushCommand) readManifest() ([]byte, error) {
 	err := parser.InterpolateAndParse(pathToManifest, pathsToVarsFiles, cmd.Vars)
 	if err != nil && !os.IsNotExist(err) {
 		log.Errorln("reading manifest:", err)
-		return nil, err
+		return &manifestparser.Parser{}, err
 	} else if os.IsNotExist(err) {
 		log.Debug("no manifest exists")
 	}
 
-	return parser.FullRawManifest(), nil
+	return parser, nil
 }
 
 func (cmd PushCommand) GetFlagOverrides() (v7pushaction.FlagOverrides, error) {
