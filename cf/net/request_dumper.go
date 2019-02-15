@@ -64,6 +64,9 @@ func (p RequestDumper) DumpRequest(req *http.Request) {
 			return
 		}
 
+		// escapedBody := bytes.Replace(requestBody, []byte(`\`), []byte(`\\`), -1)
+
+		// sanitizedJSON, err := ui.SanitizeJSON(requestBody)
 		sanitizedJSON, err := ui.SanitizeJSON(requestBody)
 
 		if err != nil {
